@@ -81,4 +81,19 @@ class OperationalSecurityTest extends TestCase
         $this->get('/settings/profile')->assertOk();
         $this->assertAuthenticatedAs($user);
     }
+
+    public function test_production_invitation_rejects_an_uninstalled_api_transport_before_creating_a_record(): void
+    {
+        Mail::fake();
+        $this->app['env'] = 'production';
+        config(['mail.default' => 'resend', 'services.resend.key' => 'synthetic-test-key', 'mail.from.address' => 'trading@kernscale.com']);
+        $rejected = false;
+        try {
+            Invitation::issue('synthetic@example.org', 'member');
+        } catch (\RuntimeException $error) {
+            $rejected = true;
+        }
+        $this->assertTrue($rejected, 'An absent API SDK must prevent invitation creation even when mail delivery is faked.');
+        $this->assertDatabaseCount('invitations', 0);
+    }
 }

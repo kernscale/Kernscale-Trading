@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Mail\MailManager;
+use Illuminate\Support\ConfigurationUrlParser;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -39,12 +41,23 @@ class Invitation extends Model
         return $invitation;
     }
 
-    private static function ensureProductionDelivery(): void
+    public static function ensureProductionDelivery(): void
     {
         $mailer = config('mail.mailers.'.config('mail.default'), []);
+        if (! is_array($mailer) || config('mail.driver') !== null) {
+            throw new \RuntimeException('Production mail transport configuration is unsupported.');
+        }
+        try {
+            if (isset($mailer['url'])) {
+                $mailer = (new ConfigurationUrlParser)->parseConfiguration($mailer);
+                $mailer['transport'] = $mailer['driver'] ?? null;
+            }
+        } catch (\Throwable) {
+            throw new \RuntimeException('Production mail transport configuration is invalid.');
+        }
         $transport = $mailer['transport'] ?? null;
-        $host = ! empty($mailer['url']) ? parse_url($mailer['url'], PHP_URL_HOST) : ($mailer['host'] ?? null);
-        $port = ! empty($mailer['url']) ? (parse_url($mailer['url'], PHP_URL_PORT) ?: 587) : ($mailer['port'] ?? null);
+        $host = $mailer['host'] ?? null;
+        $port = $mailer['port'] ?? null;
         $configured = match ($transport) {
             'smtp' => is_string($host) && $host !== '' && ! in_array(strtolower($host), ['localhost', '127.0.0.1', '::1'], true)
                 && ! preg_match('/(?:^|\.)(?:example\.(?:com|org|net)|invalid|test|example)\z/i', $host)
@@ -58,6 +71,12 @@ class Invitation extends Model
         $sender = config('mail.from.address');
         if (! $configured || ! is_string($sender) || ! filter_var($sender, FILTER_VALIDATE_EMAIL) || preg_match('/@example\.(?:com|org|net)\z/i', $sender)) {
             throw new \RuntimeException('Production invitations require configured direct SMTP/API delivery and a valid sender.');
+        }
+        try {
+            // Resolve independently of fakes/cached mailers, without sending or connecting.
+            (new MailManager(app()))->mailer();
+        } catch (\Throwable) {
+            throw new \RuntimeException('Production mail transport is unavailable or invalid.');
         }
     }
 }

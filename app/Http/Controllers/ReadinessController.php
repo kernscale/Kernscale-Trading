@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Invitation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -21,8 +22,11 @@ class ReadinessController extends Controller
             if (array_diff(array_keys($migrator->getMigrationFiles(database_path('migrations'))), $migrator->getRepository()->getRan())) {
                 throw new \RuntimeException('Migrations are pending.');
             }
-            if (app()->isProduction() && (! preg_match('/^[a-f0-9]{40}$/', config('trading.release_commit') ?? '') || ! preg_match('/@sha256:[a-f0-9]{64}$/', config('trading.release_image') ?? '') || ! config('app.key') || parse_url(config('app.url'), PHP_URL_SCHEME) !== 'https' || config('session.secure') !== true || in_array(config('mail.default'), ['log', 'array'], true))) {
+            if (app()->isProduction() && (! preg_match('/^[a-f0-9]{40}$/', config('trading.release_commit') ?? '') || ! preg_match('/@sha256:[a-f0-9]{64}$/', config('trading.release_image') ?? '') || ! config('app.key') || parse_url(config('app.url'), PHP_URL_SCHEME) !== 'https' || config('session.secure') !== true)) {
                 throw new \RuntimeException('Release configuration is incomplete.');
+            }
+            if (app()->isProduction()) {
+                Invitation::ensureProductionDelivery();
             }
         } catch (\Throwable $error) {
             return response()->json(['status' => 'unavailable'], 503);
