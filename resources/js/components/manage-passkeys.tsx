@@ -58,6 +58,7 @@ export default function ManagePasskeys(props: Props) {
                             key={passkey.id}
                             passkey={passkey}
                             onDelete={handleDelete}
+                            canDelete={passkeys.length > 1}
                         />
                     ))
                 ) : (

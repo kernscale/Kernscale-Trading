@@ -7,15 +7,22 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 /* @end-chisel-registration */
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
+use Laravel\Fortify\Events\TwoFactorAuthenticationConfirmed;
+use Laravel\Fortify\Events\ValidTwoFactorAuthenticationCodeProvided;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
+use Laravel\Passkeys\Contracts\PasskeyLoginResponse;
+use Laravel\Passkeys\Passkeys;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -24,7 +31,7 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(PasskeyLoginResponse::class, \App\Http\Responses\PasskeyLoginResponse::class);
     }
 
     /**
@@ -32,6 +39,15 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Passkeys::authorizeLoginUsing(fn ($request, $user) => $user instanceof User && $user->membership_status === 'approved');
+        foreach ([ValidTwoFactorAuthenticationCodeProvided::class, TwoFactorAuthenticationConfirmed::class] as $event) {
+            Event::listen($event, fn ($event) => session()->put('security.totp_user', $event->user->getAuthIdentifier()));
+        }
+        Fortify::authenticateUsing(function (Request $request) {
+            $user = User::where('email', strtolower($request->string('email')))->first();
+
+            return $user && $user->membership_status === 'approved' && Hash::check($request->password, $user->password) ? $user : null;
+        });
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();

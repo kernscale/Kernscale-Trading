@@ -43,3 +43,9 @@ yarn-error.log
 /boost.json
 /opencode.json
 /opencode.jsonc
+
+/.orchestration/cache/
+/.playwright-cli/
+
+**/__pycache__/
+*.py[cod]

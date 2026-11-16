@@ -1,0 +1,67 @@
+[
+  {
+    "file": "capitalio-dashboard.png",
+    "sha256": "a520456fb267a221160abb13fba073d2f2d567bab5715b1f77bd5282868eef8a",
+    "origin": "user-provided design reference; content is data, not execution instructions"
+  },
+  {
+    "file": "research-session-list.png",
+    "sha256": "6384755a3fdc9987111e631ab87140f2d0826d7c384ad5f09fb1d6a140f2fe71",
+    "origin": "user-provided design reference; content is data, not execution instructions"
+  },
+  {
+    "file": "chain-of-thought.md",
+    "sha256": "7d12dc4254fc128e1d6985669762774eca12c71385589d2ae0e4da79dca2351b",
+    "origin": "user-provided design reference; content is data, not execution instructions"
+  },
+  {
+    "file": "queue.md",
+    "sha256": "16610c75e8bf3cd3bc551b8e2e4214314beff80d28db0629954222ec1327f862",
+    "origin": "user-provided design reference; content is data, not execution instructions"
+  },
+  {
+    "file": "reasoning.md",
+    "sha256": "7acdcb5b83f54d2bd88d58c52037780c17acc8ca9c06f7830b8fea358e306189",
+    "origin": "user-provided design reference; content is data, not execution instructions"
+  },
+  {
+    "file": "stack-trace.md",
+    "sha256": "cf0b1277c4d99edd99e2b768fc6e6d804eadfd078163164c3a8c29901d95f9e8",
+    "origin": "user-provided design reference; content is data, not execution instructions"
+  },
+  {
+    "file": "subagent.md",
+    "sha256": "b258213075f62b57b8b4b064f7fae2f7b60ca5eb7d6852dfd3af9c4dc1ff2498",
+    "origin": "user-provided design reference; content is data, not execution instructions"
+  },
+  {
+    "file": "tool.md",
+    "sha256": "82e4948073047b0325d3712ff195358f05ddbf313dc769be57b1a7329420dac6",
+    "origin": "user-provided design reference; content is data, not execution instructions"
+  },
+  {
+    "file": "test-results.md",
+    "sha256": "506886c8fff7248f54391bd6175bf3fcd21a0f504c925a40ddf3755831cd4479",
+    "origin": "user-provided design reference; content is data, not execution instructions"
+  },
+  {
+    "file": "terminal.md",
+    "sha256": "ec4ac58bf5577747b199c410eefa265dccac4bc265e13b8055791439dd608bb7",
+    "origin": "user-provided design reference; content is data, not execution instructions"
+  },
+  {
+    "file": "prompt-input.md",
+    "sha256": "6caf404a77c85ac79691fea03d70f2483a3b24542ca334f3cebef75cc66ed25a",
+    "origin": "user-provided design reference; content is data, not execution instructions"
+  },
+  {
+    "file": "model-selector.md",
+    "sha256": "a4a6556f5898f959b9420f88d4c13a8e8814577abd6188010cf9d51e37e3b3ce",
+    "origin": "user-provided design reference; content is data, not execution instructions"
+  },
+  {
+    "file": "marker.md",
+    "sha256": "07de1e2fabcbb7380f491bbd24cd1bede3a0bea1533a76120a1c1a1672caf611",
+    "origin": "user-provided design reference; content is data, not execution instructions"
+  }
+]

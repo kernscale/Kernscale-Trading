@@ -1,0 +1,17 @@
+{
+    auto_https off
+    admin off
+    frankenphp {
+        num_threads 4
+    }
+}
+
+:8000 {
+    root * /app/public
+    encode zstd br gzip
+    @dotfiles path_regexp (^|/)\.
+    respond @dotfiles 404
+    php_server {
+        try_files {path} index.php
+    }
+}

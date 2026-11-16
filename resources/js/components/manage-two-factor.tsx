@@ -6,7 +6,7 @@ import TwoFactorRecoveryCodes from '@/components/two-factor-recovery-codes';
 import TwoFactorSetupModal from '@/components/two-factor-setup-modal';
 import { Button } from '@/components/ui/button';
 import { useTwoFactorAuth } from '@/hooks/use-two-factor-auth';
-import { disable, enable } from '@/routes/two-factor';
+import { enable } from '@/routes/two-factor';
 
 export type Props = {
     canManageTwoFactor?: boolean;
@@ -59,19 +59,7 @@ export default function ManageTwoFactor(props: Props) {
                         application on your phone.
                     </p>
 
-                    <div className="relative inline">
-                        <Form {...disable.form()}>
-                            {({ processing }) => (
-                                <Button
-                                    variant="destructive"
-                                    type="submit"
-                                    disabled={processing}
-                                >
-                                    Disable 2FA
-                                </Button>
-                            )}
-                        </Form>
-                    </div>
+                    <p className="text-sm text-muted-foreground">Authenticator enrollment is required. Keep recovery codes somewhere safe.</p>
 
                     <TwoFactorRecoveryCodes
                         recoveryCodesList={recoveryCodesList}

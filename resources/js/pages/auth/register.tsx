@@ -7,18 +7,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
-import { store } from '@/routes/register';
 
 type Props = {
     passwordRules: string;
+    token: string;
+    email: string;
 };
 
-export default function Register({ passwordRules }: Props) {
+export default function Register({ passwordRules, token, email }: Props) {
     return (
         <>
             <Head title="Register" />
             <Form
-                {...store.form()}
+                action={`/invitations/${token}`}
+                method="post"
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
                 className="flex flex-col gap-6"
@@ -53,6 +55,8 @@ export default function Register({ passwordRules }: Props) {
                                     tabIndex={2}
                                     autoComplete="email"
                                     name="email"
+                                    value={email}
+                                    readOnly
                                     placeholder="email@example.com"
                                 />
                                 <InputError message={errors.email} />
@@ -115,6 +119,6 @@ export default function Register({ passwordRules }: Props) {
 }
 
 Register.layout = {
-    title: 'Create an account',
-    description: 'Enter your details below to create your account',
+    title: 'Accept your invitation',
+    description: 'Create your account, then enroll a passkey and authenticator app',
 };

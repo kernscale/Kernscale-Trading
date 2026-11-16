@@ -1,0 +1,22 @@
+{
+  "1": {
+    "uid": 21001,
+    "gid": 21001,
+    "home": "/var/lib/kernscale-trading-researchers/1",
+    "omp": "/opt/kernscale/omp/bin/omp",
+    "omp_revision": "6f03614d761366972e80e84e25d1418ed678d2c7",
+    "omp_sha256": "OPERATOR_PROVISIONS_VERIFIED_ARTIFACT_SHA256",
+    "go_key": "OPERATOR_PROVISIONS_SECRET_HERE",
+    "runtime_qualified": false
+  },
+  "2": {
+    "uid": 21002,
+    "gid": 21002,
+    "home": "/var/lib/kernscale-trading-researchers/2",
+    "omp": "/opt/kernscale/omp/bin/omp",
+    "omp_revision": "6f03614d761366972e80e84e25d1418ed678d2c7",
+    "omp_sha256": "OPERATOR_PROVISIONS_VERIFIED_ARTIFACT_SHA256",
+    "go_key": "OPERATOR_PROVISIONS_SECRET_HERE",
+    "runtime_qualified": false
+  }
+}

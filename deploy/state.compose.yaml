@@ -1,0 +1,35 @@
+name: kernscale-trading-hub-state
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:?set reviewed postgres17 digest}
+    env_file: ${POSTGRES_ENV_FILE:?set protected absolute postgres env path}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    networks: [data]
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+  redis:
+    image: ${REDIS_IMAGE:?set reviewed redis7 digest}
+    command: [redis-server, /usr/local/etc/redis/redis.conf]
+    volumes:
+      - ${REDIS_CONFIG_FILE:?set protected absolute redis config path}:/usr/local/etc/redis/redis.conf:ro
+      - redis:/data
+    networks: [data]
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+volumes:
+  postgres:
+    name: kernscale-trading-hub-postgres
+    external: true
+  redis:
+    name: kernscale-trading-hub-redis
+    external: true
+networks:
+  data:
+    name: kernscale-trading-hub-data
+    external: true

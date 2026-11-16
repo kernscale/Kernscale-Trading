@@ -1,5 +1,4 @@
 import { Head } from '@inertiajs/react';
-import AppearanceTabs from '@/components/appearance-tabs';
 import Heading from '@/components/heading';
 import { edit as editAppearance } from '@/routes/appearance';
 
@@ -14,9 +13,15 @@ export default function Appearance() {
                 <Heading
                     variant="small"
                     title="Appearance settings"
-                    description="Update the appearance settings for your account"
+                    description="Trading workspace appearance"
                 />
-                <AppearanceTabs />
+                <div className="rounded-lg border border-border bg-card p-4">
+                    <p className="text-sm font-medium">Dark workspace</p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                        Trading uses a consistent dark theme for research,
+                        reports and account settings.
+                    </p>
+                </div>
             </div>
         </>
     );

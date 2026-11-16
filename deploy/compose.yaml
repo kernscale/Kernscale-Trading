@@ -1,0 +1,75 @@
+name: kernscale-trading-hub-${SLOT:?set blue or green}
+x-app: &app
+  image: ${APP_IMAGE:?set immutable reviewed application digest}
+  user: '10001:10001'
+  env_file: ${RUNTIME_ENV_FILE:?set protected absolute runtime env path}
+  environment:
+    APP_ENV: production
+    APP_DEBUG: 'false'
+    KERNSCALE_RELEASE_IMAGE: ${APP_IMAGE:?}
+    KERNSCALE_RELEASE_COMMIT: ${COMMIT_SHA:?set reviewed source commit}
+  read_only: true
+  tmpfs:
+    - /tmp:uid=10001,gid=10001,mode=1777,size=32m
+    - /app/bootstrap/cache:uid=10001,gid=10001,mode=0750,size=16m
+    - /data:uid=10001,gid=10001,mode=0750,size=16m
+    - /config:uid=10001,gid=10001,mode=0750,size=16m
+  volumes:
+    - storage:/app/storage
+  networks: [data, egress]
+  restart: unless-stopped
+  init: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  logging:
+    driver: local
+    options: {max-size: 10m, max-file: '3'}
+services:
+  app:
+    <<: *app
+    networks: [data, egress, ingress]
+    healthcheck:
+      test: [CMD, php, '-r', "exit(@file_get_contents('http://127.0.0.1:8000/ready') === false ? 1 : 0);"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    # Labels are inert until the dedicated Ops ingress has been admitted.
+    labels:
+      - traefik.enable=true
+      - kernscale.proxy=true
+      - traefik.docker.network=kernscale-ingress-kernscale-trading-hub
+      - traefik.http.routers.kernscale-trading-hub-${SLOT}.rule=Host(`trading.kernscale.com`)
+      - traefik.http.routers.kernscale-trading-hub-${SLOT}.entrypoints=web
+      - traefik.http.routers.kernscale-trading-hub-${SLOT}.priority=${ROUTE_PRIORITY:?set reviewed slot route priority}
+      - traefik.http.services.kernscale-trading-hub-${SLOT}.loadbalancer.server.port=8000
+  queue:
+    <<: *app
+    profiles: [workers]
+    command: [php, artisan, horizon]
+    healthcheck:
+      test: [CMD, php, artisan, 'horizon:status']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    stop_grace_period: 90s
+  scheduler:
+    <<: *app
+    profiles: [workers]
+    command: [php, artisan, 'schedule:work']
+    healthcheck: {disable: true}
+    stop_grace_period: 90s
+volumes:
+  storage:
+    name: kernscale-trading-hub-storage
+    external: true
+networks:
+  ingress:
+    name: kernscale-ingress-kernscale-trading-hub
+    external: true
+  data:
+    name: kernscale-trading-hub-data
+    external: true
+  egress:
+    name: kernscale-trading-hub-egress
+    external: true

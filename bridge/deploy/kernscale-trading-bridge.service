@@ -1,0 +1,27 @@
+# Host admission template only; do not enable until Linux isolation and runtime qualification pass.
+[Unit]
+Description=Private Kernscale Trading research coordinator
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/kernscale/trading
+EnvironmentFile=/etc/kernscale-trading/bridge.env
+ExecStart=/opt/kernscale/trading/venv/bin/uvicorn bridge.app:create_app --factory --host 127.0.0.1 --port 8863 --workers 1
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/kernscale-trading-bridge /var/lib/kernscale-trading-researchers /sys/fs/cgroup/kernscale-trading
+CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_DAC_OVERRIDE
+AmbientCapabilities=
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+KillMode=control-group
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

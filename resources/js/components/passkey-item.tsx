@@ -14,10 +14,11 @@ import type { Passkey } from '@/types/auth';
 
 type Props = {
     passkey: Passkey;
+    canDelete?: boolean;
     onDelete: (id: number, onError: () => void) => void;
 };
 
-export default function PasskeyItem({ passkey, onDelete }: Props) {
+export default function PasskeyItem({ passkey, onDelete, canDelete = true }: Props) {
     const [isDeleting, setIsDeleting] = useState(false);
 
     const handleDelete = () => {
@@ -59,6 +60,8 @@ export default function PasskeyItem({ passkey, onDelete }: Props) {
             <Dialog>
                 <DialogTrigger asChild>
                     <Button
+                        disabled={!canDelete}
+                        title={canDelete ? 'Remove passkey' : 'Keep at least one enrolled passkey'}
                         variant="ghost"
                         size="sm"
                         className="text-destructive hover:bg-destructive/10 hover:text-destructive"

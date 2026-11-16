@@ -1,0 +1,85 @@
+.hub-markdown {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 14px;
+    line-height: 1.8;
+}
+.hub-markdown > :first-child {
+    margin-top: 0;
+}
+.hub-markdown p,
+.hub-markdown ul,
+.hub-markdown ol,
+.hub-markdown blockquote,
+.hub-markdown pre,
+.hub-markdown table {
+    margin-block: 1em;
+}
+.hub-markdown h1,
+.hub-markdown h2,
+.hub-markdown h3,
+.hub-markdown h4 {
+    margin-block: 1.3em 0.5em;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--foreground);
+}
+.hub-markdown h1 {
+    font-size: 1.6em;
+}
+.hub-markdown h2 {
+    font-size: 1.3em;
+}
+.hub-markdown h3 {
+    font-size: 1.1em;
+}
+.hub-markdown ul,
+.hub-markdown ol {
+    padding-left: 1.5em;
+}
+.hub-markdown ul {
+    list-style: disc;
+}
+.hub-markdown ol {
+    list-style: decimal;
+}
+.hub-markdown a {
+    color: #91ddba;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.hub-markdown blockquote {
+    border-left: 2px solid #4f675e;
+    padding-left: 1em;
+    color: var(--muted-foreground);
+}
+.hub-markdown pre {
+    overflow-x: auto;
+    border-radius: 6px;
+    background: #111113;
+    padding: 14px;
+}
+.hub-markdown code {
+    font-size: 0.85em;
+    font-family: ui-monospace, monospace;
+}
+.hub-markdown table {
+    border-collapse: collapse;
+    min-width: 100%;
+    font-size: 12px;
+    text-align: left;
+}
+.hub-markdown th,
+.hub-markdown td {
+    border: 1px solid #36363b;
+    padding: 9px 12px;
+    white-space: nowrap;
+}
+.hub-markdown th {
+    background: #242428;
+    font-weight: 500;
+}
+.hub-markdown hr {
+    margin-block: 1.5em;
+    border-color: #36363b;
+}

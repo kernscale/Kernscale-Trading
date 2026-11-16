@@ -118,11 +118,14 @@ function TwoFactorSetupStep({
                                 <>
                                     <input
                                         type="text"
+                                        aria-label="Authenticator setup key"
                                         readOnly
                                         value={manualSetupKey}
                                         className="h-full w-full bg-background p-3 text-foreground outline-none"
                                     />
                                     <button
+                                        type="button"
+                                        aria-label="Copy authenticator setup key"
                                         onClick={() => copy(manualSetupKey)}
                                         className="border-l border-border px-3 hover:bg-muted"
                                     >
@@ -176,6 +179,7 @@ function TwoFactorVerificationStep({
                         <div className="flex w-full flex-col items-center space-y-3 py-2">
                             <InputOTP
                                 id="otp"
+                                aria-label="Authenticator verification code"
                                 name="code"
                                 maxLength={OTP_MAX_LENGTH}
                                 onChange={setCode}
