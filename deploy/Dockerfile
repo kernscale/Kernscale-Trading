@@ -17,9 +17,9 @@ COPY routes ./routes
 COPY resources ./resources
 COPY public ./public
 COPY artisan ./artisan
-RUN composer dump-autoload --no-dev --classmap-authoritative --no-interaction \
-    && mkdir -p storage/app/private storage/app/public storage/framework/cache/data \
+RUN mkdir -p storage/app/private storage/app/public storage/framework/cache/data \
        storage/framework/sessions storage/framework/views storage/logs bootstrap/cache /data /config \
+    && composer dump-autoload --no-dev --classmap-authoritative --no-interaction \
     && chown -R kernscale:kernscale storage bootstrap/cache /data /config
 
 FROM source AS frontend
@@ -30,6 +30,17 @@ COPY package.json package-lock.json vite.config.ts tsconfig.json ./
 RUN npm ci --ignore-scripts && npm run build
 
 FROM source AS runtime
+ARG SOURCE_COMMIT
+ARG SOURCE_REPOSITORY
+ARG SOURCE_REF
+ARG SOURCE_CREATED
+ARG SOURCE_VERSION
+LABEL org.opencontainers.image.title="Kernscale Trading Hub" \
+      org.opencontainers.image.revision=$SOURCE_COMMIT \
+      org.opencontainers.image.source=$SOURCE_REPOSITORY \
+      org.opencontainers.image.ref.name=$SOURCE_REF \
+      org.opencontainers.image.created=$SOURCE_CREATED \
+      org.opencontainers.image.version=$SOURCE_VERSION
 COPY --from=frontend /app/public/build ./public/build
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
 ENV APP_ENV=production APP_DEBUG=false LOG_CHANNEL=stderr

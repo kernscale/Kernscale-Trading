@@ -1,0 +1,43 @@
+/* User-selected straight action arrows; the upstream icon asset remains byte-for-byte intact. */
+.capitalio-dashboard button svg[viewBox='0 0 16.7314 16.7314'] {
+    rotate: 45deg;
+}
+.capitalio-dashboard .hub-button.primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--primary-foreground);
+}
+.capitalio-dashboard .hub-button.primary:hover {
+    background: color-mix(in oklab, var(--primary) 85%, white);
+}
+@media (prefers-reduced-motion: reduce) {
+    .capitalio-dashboard,
+    .capitalio-dashboard *,
+    .capitalio-dashboard *::before,
+    .capitalio-dashboard *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}
+/* The installed sidebar primitive emits data-active="false"; upstream Base UI omits it. */
+.capitalio-dashboard [data-slot='sidebar-menu-button'][data-active='false'],
+body:has(.capitalio-dashboard)
+    [data-slot='sidebar'][data-mobile='true']
+    [data-slot='sidebar-menu-button'][data-active='false'] {
+    color: var(--muted-foreground);
+}
+
+body:has(.capitalio-dashboard)
+    [data-slot='sidebar'][data-mobile='true']
+    .premium-badge {
+    display: inline-block;
+    align-self: flex-start;
+    width: fit-content;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.5rem;
+    line-height: 1;
+    background: linear-gradient(90deg, #efe189 0%, #ebc745 50%, #e7ad00 100%);
+    color: #5a3300;
+}

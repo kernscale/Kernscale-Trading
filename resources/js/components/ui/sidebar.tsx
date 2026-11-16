@@ -193,6 +193,12 @@ function Sidebar({
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
             } as React.CSSProperties
           }
+          onCloseAutoFocus={(event) => {
+            event.preventDefault()
+            document
+              .querySelector<HTMLButtonElement>("[data-sidebar='trigger']")
+              ?.focus()
+          }}
           side={side}
         >
           <div className="flex h-full w-full flex-col">{children}</div>

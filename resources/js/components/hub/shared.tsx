@@ -1,4 +1,5 @@
 // Card structure adapted from Capitalio by Watermelon (https://registry.watermelon.sh/r/capitalio-dashboard.json).
+import { DashboardCard, DetailHeader } from '@/components/capitalio/shared';
 import { Link } from '@inertiajs/react';
 import { ArrowRight, CircleDashed } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -14,19 +15,14 @@ export function Panel({
     className?: string;
 }) {
     return (
-        <section className={`hub-card ${className}`}>
+        <DashboardCard className={className}>
             {title && (
-                <header className="mb-5 flex flex-wrap items-center justify-between gap-2">
-                    <h2 className="text-base font-medium">{title}</h2>
-                    {note && (
-                        <span className="text-xs text-muted-foreground">
-                            {note}
-                        </span>
-                    )}
-                </header>
+                <div className="mb-4">
+                    <DetailHeader title={title} subtitle={note} />
+                </div>
             )}
             {children}
-        </section>
+        </DashboardCard>
     );
 }
 export function Empty({

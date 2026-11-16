@@ -1,3 +1,5 @@
+> Superseded visual implementation: see `.orchestration/frontend-capitalio-report.md` for the final exact-source Capitalio correction. Earlier receipts below remain historical.
+
 # Frontend implementation receipt — 16 November 2026
 
 Checked working tree based on `012f4248f70e255e32ad93f540aca5fb7e8c96fe`, branch `codex/trading-hub`. This is local implementation, not deployed or live-finance acceptance.

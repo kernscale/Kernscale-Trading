@@ -1,0 +1,66 @@
+{
+  "registry": "https://registry.watermelon.sh/r/capitalio-dashboard.json",
+  "registry_sha256": "8ca7f46ec8b0dedd5708b36391aae9aa0f131ddd2eddc644bc76e31c0d5d97c5",
+  "files": [
+    {
+      "path": "resources/js/components/watermelon/capitalio-dashboard/components/capitalio/analytics-page.tsx",
+      "sha256": "d0ad303535dad65ec33a8de6d3e569aef4744e8587e2e3114295b4e70408db72",
+      "source": "src/components/dashboards/capitalio-dashboard/components/capitalio/analytics-page.tsx"
+    },
+    {
+      "path": "resources/js/components/watermelon/capitalio-dashboard/components/capitalio/dashboard-page.tsx",
+      "sha256": "44c762dad33e891392c32d7b7811cb84263963d3208aea94ed6c1d8efcffe63b",
+      "source": "src/components/dashboards/capitalio-dashboard/components/capitalio/dashboard-page.tsx"
+    },
+    {
+      "path": "resources/js/components/watermelon/capitalio-dashboard/components/capitalio/icons.tsx",
+      "sha256": "8782485a6804b564ba895a277ffebd8eb1388894dc97d2e11fa7d203869ed48f",
+      "source": "src/components/dashboards/capitalio-dashboard/components/capitalio/icons.tsx"
+    },
+    {
+      "path": "resources/js/components/watermelon/capitalio-dashboard/components/capitalio/logo.tsx",
+      "sha256": "ba4434c6c69fc130559f738cb343448a80da9d40edea792fce9b6ae6484b48df",
+      "source": "src/components/dashboards/capitalio-dashboard/components/capitalio/logo.tsx"
+    },
+    {
+      "path": "resources/js/components/watermelon/capitalio-dashboard/components/capitalio/navigation.tsx",
+      "sha256": "c4dab4a18c696691d931df547e1e7a46c9110f61ab0901f46cb443fd14b205a1",
+      "source": "src/components/dashboards/capitalio-dashboard/components/capitalio/navigation.tsx"
+    },
+    {
+      "path": "resources/js/components/watermelon/capitalio-dashboard/components/capitalio/shared.tsx",
+      "sha256": "bfad4cd6a79af2e2c6dda3742a9b0833477001279ee9a8a71e668f867eba6661",
+      "source": "src/components/dashboards/capitalio-dashboard/components/capitalio/shared.tsx"
+    },
+    {
+      "path": "resources/js/components/watermelon/capitalio-dashboard/components/capitalio/sidebar.tsx",
+      "sha256": "ca95753a0f2c9248e3538f425178153c8e97437eaff2c8ee46b9f568540096b3",
+      "source": "src/components/dashboards/capitalio-dashboard/components/capitalio/sidebar.tsx"
+    },
+    {
+      "path": "resources/js/components/watermelon/capitalio-dashboard/components/capitalio/topbar.tsx",
+      "sha256": "25be1326e066680afd16cab41a23b5a75d198d7cd88bfa5649112897cc0a9108",
+      "source": "src/components/dashboards/capitalio-dashboard/components/capitalio/topbar.tsx"
+    },
+    {
+      "path": "resources/js/components/watermelon/capitalio-dashboard/dashboard-layout.tsx",
+      "sha256": "1bdc11c822e724b7015d8894a96b874b179b5cda31291c261d27082ed7af91ab",
+      "source": "src/components/dashboards/capitalio-dashboard/dashboard-layout.tsx"
+    },
+    {
+      "path": "resources/js/components/watermelon/capitalio-dashboard/dashboard.css",
+      "sha256": "09434c18f8d449c1e297ce278065718fc3e796a0a642d84b0ebbea9e05bc3e88",
+      "source": "src/components/dashboards/capitalio-dashboard/dashboard.css"
+    },
+    {
+      "path": "resources/js/components/watermelon/capitalio-dashboard/data.ts",
+      "sha256": "e43459ba02020d52b2ed5fcbc7172be1770917c0f4942900c9786eaca98e1160",
+      "source": "src/components/dashboards/capitalio-dashboard/data.ts"
+    },
+    {
+      "path": "resources/js/components/watermelon/capitalio-dashboard/demo.tsx",
+      "sha256": "5a57123a8c78ed936a54a20d623aee42769cd939b8133e6a3a31a060e37e8ec4",
+      "source": "src/components/dashboards/capitalio-dashboard/demo.tsx"
+    }
+  ]
+}

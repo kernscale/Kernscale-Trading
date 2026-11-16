@@ -14,6 +14,14 @@ use Inertia\Response;
 
 class HubController extends Controller
 {
+    public function capitalioPreview(Request $request): Response
+    {
+        abort_unless(app()->environment('local'), 404);
+        abort_unless($request->user()->hasRole('owner'), 403);
+
+        return Inertia::render('hub/capitalio-preview', ['designPreview' => true]);
+    }
+
     public function dashboard(Request $request): Response
     {
         $reports = IntegrationSnapshot::where('kind', 'native_reports')->first()?->payload['reports'] ?? [];

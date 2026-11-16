@@ -2,8 +2,8 @@
     display: grid;
     grid-template-columns: 220px minmax(280px, 1fr) 280px;
     gap: 1px;
-    background: #2b2b2e;
-    border: 1px solid #2b2b2e;
+    background: var(--border);
+    border: 1px solid var(--border);
     border-radius: 10px;
     overflow: hidden;
     height: calc(100dvh - 220px);
@@ -12,7 +12,7 @@
 .research-pane {
     min-width: 0;
     min-height: 0;
-    background: #171719;
+    background: var(--card);
 }
 .research-sessions {
     padding: 18px 12px;
@@ -26,7 +26,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: #141416;
+    background: var(--background);
     min-height: 0;
 }
 .research-conversation > header,
@@ -42,8 +42,8 @@
 }
 .research-composer {
     padding: 18px;
-    border-top: 1px solid #2a2a2e;
-    background: #19191c;
+    border-top: 1px solid var(--border);
+    background: var(--card);
 }
 .research-tabs {
     display: none;
@@ -84,4 +84,20 @@
 
 .research-sessions .research-search-input {
     padding-left: 2.25rem;
+}
+
+.research-workspace-page {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+}
+.research-workspace-page > .research-grid {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+}
+.research-workspace-page .research-conversation {
+    min-height: 0;
+    height: 100%;
 }

@@ -12,6 +12,7 @@ void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     layout: (name) => {
         switch (true) {
+            case name === 'hub/capitalio-preview':
             case name === 'welcome':
                 return null;
             case name.startsWith('auth/'):

@@ -1,6 +1,8 @@
 # Kernscale Trading Hub frontend and OMP research design
 
-Date: 16 November 2026. Status: owner-selected design implemented locally; current checks are recorded in `.orchestration/` and live acceptance remains pending. This extends the [deployment design](deployment.md). Explicit selections below supersede conflicting assistant-ui/default-chart suggestions in the earlier research catalog.
+Date: 16 November 2026. Status: initial local implementation was rejected for insufficient Capitalio visual parity; the complete registry source and native application adaptation are now implemented and browser-checked locally. This extends the [deployment design](deployment.md). Explicit selections below supersede conflicting assistant-ui/default-chart suggestions in the earlier research catalog.
+
+The owner subsequently clarified that the complete Capitalio registry design is required, including all charts, effects and blocks. A restrained interpretation is insufficient. [The complete reference/parity map](../design-references/capitalio-parity.md) governs this correction. Keep Kernscale behavior and financial provenance while using the actual selected source structure and treatments. Deployment access is deferred while this frontend correction is completed.
 
 ## Selected sources
 

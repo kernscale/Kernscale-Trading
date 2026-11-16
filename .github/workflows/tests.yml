@@ -1,38 +1,70 @@
-name: tests
+name: Trading Hub source validation
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
 
 jobs:
-  ci:
-    runs-on: ubuntu-latest
-
+  candidate:
+    runs-on: ubuntu-24.04
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
     steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check out candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
-
-      - name: Setup PHP
+      - name: Set up PHP
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
-          php-version: '8.3'
+          php-version: '8.4'
+          extensions: bcmath, intl, pcntl, pdo_sqlite, pdo_pgsql, redis, zip
           tools: composer:v2
           coverage: none
-
-      - name: Setup Node
+      - name: Set up Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '22'
-
-      - name: Setup Application
-        run: composer setup
-
-      - name: Run CI Checks
-        run: composer ci:check
+          node-version: '24'
+          cache: npm
+      - name: Install pinned dependencies
+        run: |
+          composer install --prefer-dist --no-interaction --no-progress --no-scripts
+          npm ci --ignore-scripts
+      - name: Prepare isolated test application
+        run: |
+          cp .env.example .env
+          mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+          php artisan package:discover --ansi
+          php artisan key:generate --force --no-interaction
+          php artisan wayfinder:generate --with-form --no-interaction
+      - name: Check affected frontend types
+        run: npm run types:check
+      - name: Check explicit candidate feature selection
+        run: |
+          php artisan test --compact \
+            tests/Feature/Auth/AuthenticationTest.php tests/Feature/Auth/RegistrationTest.php \
+            tests/Feature/Auth/InvitationTest.php tests/Feature/Auth/MembershipTest.php \
+            tests/Feature/Auth/OperationalSecurityTest.php tests/Feature/Auth/TwoFactorChallengeTest.php \
+            tests/Feature/Settings/ProfileUpdateTest.php tests/Feature/Settings/SecurityTest.php \
+            tests/Feature/DashboardTest.php tests/Feature/ResearchLifecycleTest.php \
+            tests/Feature/ResearchDispatchStateTest.php tests/Feature/ResearchSessionManagementTest.php \
+            tests/Feature/WorkspaceProposalsTest.php tests/Feature/PublicationTest.php \
+            tests/Feature/PortfolioToolsTest.php tests/Feature/ValuationHistoryTest.php \
+            tests/Feature/SnapshotSyncTest.php tests/Feature/LegacyTradingImportTest.php \
+            tests/Feature/ReadinessTest.php tests/Feature/ProxyBoundaryTest.php \
+            tests/Feature/CapitalioPreviewTest.php
+      - name: Check runtime source contract
+        run: python3 -B deploy/tests/test_runtime.py
+      - name: Preserve complete selected Capitalio reference
+        run: python3 -B tests/Design/test_capitalio_reference.py

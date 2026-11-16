@@ -1,6 +1,6 @@
 # Trading Hub implementation ledger
 
-Goal: complete the approved unified Laravel Trading Hub. User authorized local auth/isolation with `ack execute`; production cutover awaits `ack release`.
+Goal: complete the approved unified Laravel Trading Hub. User authorized local auth/isolation with `ack execute` and subsequently supplied `ack release`. The user then deferred administrator access and redirected work to frontend design review; host installation/cutover remain deferred. Do not request release approval again when that work resumes.
 
 Baseline: official Laravel React starter kit commit `012f4248f70e255e32ad93f540aca5fb7e8c96fe` (no production state copied). New source repository is `products/Kernscale-Trading`; writable linked implementation checkout is `internal/Kernscale-Trading`, branch `codex/trading-hub`.
 
@@ -19,6 +19,10 @@ Ruling: use a linked writable checkout because the native worktree helper did no
 ## Progress
 
 - Repository scaffold created. No engine, services, credentials or traffic changed.
+
+- Release preparation after approval: new `kernscale/Kernscale-Trading` GitHub repository created and verified private; source/image not pushed. The earlier candidate's production frontend assets built successfully. Fresh Ops/Agents2 checks still require authenticated administrator admission. Synthetic Go API probe passed against the exact approved route/model; this is not isolated OMP/R1 acceptance. CI/image workflow source is prepared locally; publication is deferred while frontend review takes priority.
+
+- Exact Capitalio correction: all twelve selected registry files are now included byte-for-byte with a committed hash guard; all eight Dashboard and six Analytics blocks render in the marked local-owner preview. Native Dashboard/Portfolio and the whole app use the actual source frame, CSS, icons, effects, Inter and block structure, preserving real research features and financial provenance. Original approximate chart implementation was removed. Root browser verified four period selections, tooltip, sample export, Analytics, phone/tablet layout, drawer focus, no fixture leakage, real watchlists, visible R1 composer and preserved mobile draft/board bounds. The latest acceptance receipt supersedes the original design claim.
 
 - Local dependencies installed: Laravel13.42, Fortify1.x/passkeys0.2.1, Spatie8.5, Horizon5.51; npm locked. No production build or image created.
 - Auth lane: 55 targeted tests / 200 assertions passed. Invitation-only membership, required passkey+TOTP, TOTP assurance after passkey/remembered login, owner controls and last-authenticator retention.

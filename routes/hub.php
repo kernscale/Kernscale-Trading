@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified', 'approved', 'security.enrolled'])->group(function () {
     Route::get('/dashboard', [HubController::class, 'dashboard'])->name('dashboard');
+    Route::get('/design/capitalio', [HubController::class, 'capitalioPreview'])->name('design.capitalio');
     Route::post('/portfolio/watchlists', [PortfolioToolsController::class, 'add']);
     Route::delete('/portfolio/watchlists/{id}', [PortfolioToolsController::class, 'remove']);
     Route::get('/portfolio/export', [PortfolioToolsController::class, 'export']);
