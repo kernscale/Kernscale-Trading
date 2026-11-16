@@ -28,12 +28,12 @@ Ruling: use a linked writable checkout because the native worktree helper did no
 - Legacy lane: eight tests/32 assertions passed for explicit immutable normalized imports and denial of private content/privilege mapping. Real export conversion/reconciliation pending.
 - Hosting/Operations: scoped candidate packaging and lean native capture/off-host verification helpers pass offline tests. Live read-only Ops inventory found Docker denied and sudo requires authentication; ingress/admission not verified.
 - Ruling: native scheduled run receipts are displayed separately from immutable research artifacts, allowing pending receipts to acquire their real report later.
-- Pending user scope decision: separate private tracked portfolios versus shared paper portfolio plus private watchlists. Preserve shared native paper authority either way.
+- Portfolio scope settled: shared paper portfolio plus private watchlists only; no separate tracked financial ledger.
 
 - User confirmed shared paper portfolio and private watchlists only; no private financial ledger/account module.
 - Independent review helper was rejected by automatic approval review because it could transmit private candidate source to another model service. No helper retry or source export occurred; root continues manual review and local receipts.
 - Manual review found Horizon's vendor queue list omitted `research`; explicit app queue configuration added. Readiness now checks actual schema/migration and immutable production release identity rather than only DB connectivity.
-- Browser verified synthetic TOTP enrollment and passkey registration on localhost. Post-enrollment/login session behavior remains under diagnosis; do not claim browser auth acceptance yet.
+- Browser verified synthetic enrollment, password+TOTP and passkey+TOTP login, passkey reconfirmation and recovery-code visibility on localhost. Canonical-domain physical authenticator acceptance remains a release gate. Earlier apparent session loss was caused by reopening the automation browser context, not the application.
 
 - Actual read-only Agents2 metadata: native 11MB paper ledger and research directories exist; research/tick timers and existing UI service are active. Service state alone is not proof of successful research.
 - No admitted Ops admin/deploy interface is currently evidenced: Docker denied, noninteractive sudo requires authentication; VM101 release wrapper must not be reused for OpsVM100.

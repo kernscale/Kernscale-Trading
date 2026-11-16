@@ -1,0 +1,23 @@
+{
+  "repository": "/Users/jonasknppel/Businesses/Kernscale/repositories/internal/Kernscale-Hosting",
+  "baseHead": "b1e335aceb5f0f5ea96f761bee7bcb7e7281af28",
+  "scope": "server/production/deployment/kernscale-trading-hub",
+  "gitStatus": "?? server/production/deployment/kernscale-trading-hub/",
+  "files": [
+    {
+      "path": "server/production/deployment/kernscale-trading-hub/README.md",
+      "sha256": "89319469e4abea600f1d654738fcf9d9ce5f90e68a8fd9f60b1e6c2e3096c2b5",
+      "bytes": 3557
+    },
+    {
+      "path": "server/production/deployment/kernscale-trading-hub/contract.py",
+      "sha256": "407ac2f80ce0d971ee8f5b4875104b2cf52bac1be92467085b79260486ddd2ee",
+      "bytes": 3323
+    },
+    {
+      "path": "server/production/deployment/kernscale-trading-hub/tests/test_contract.py",
+      "sha256": "a807d40479c8a4f166ac8c1eb68fd25add3a17a57a38ac09cdbcc62a8b865f8c",
+      "bytes": 2508
+    }
+  ]
+}

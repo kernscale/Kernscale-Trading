@@ -1,0 +1,48 @@
+{
+  "repository": "/Users/jonasknppel/Businesses/Kernscale/repositories/internal/Kernscale-Operations",
+  "baseHead": "f354cb81da8f93cd8367fd0ca232b9b8211d4eae",
+  "scope": "server/production/backup/server2/trading-hub",
+  "gitStatus": "?? server/production/backup/server2/trading-hub/",
+  "files": [
+    {
+      "path": "server/production/backup/server2/trading-hub/README.md",
+      "sha256": "dfc106fdca472ea8366838f571b2cbfad589bc9dbc8a13eb7e815bda430a8960",
+      "bytes": 3156
+    },
+    {
+      "path": "server/production/backup/server2/trading-hub/RUNBOOK.md",
+      "sha256": "e69f4f4c7a3c0a0d1b03e2ccfa5af675a0fcf3520a75a4fe6902aaabb35b1e21",
+      "bytes": 4239
+    },
+    {
+      "path": "server/production/backup/server2/trading-hub/capture.py",
+      "sha256": "6ee74b399c96fa7477520ad324f7b36b2d59737798dd0041988d1a86d52104ec",
+      "bytes": 5667
+    },
+    {
+      "path": "server/production/backup/server2/trading-hub/publish.py",
+      "sha256": "261f59f48a7fb8bb16f24ad709f9904916fd327038386b6144fd15d326b180ed",
+      "bytes": 3601
+    },
+    {
+      "path": "server/production/backup/server2/trading-hub/recovery.py",
+      "sha256": "37235fc787f53d3a5374f116dfb9981c4d5a72cc777ca4904526c77b7362cc48",
+      "bytes": 2629
+    },
+    {
+      "path": "server/production/backup/server2/trading-hub/tests/test_capture.py",
+      "sha256": "0321a48d9f299715527c53c828a8c814162c867847f84bd66856803d1c74a804",
+      "bytes": 3174
+    },
+    {
+      "path": "server/production/backup/server2/trading-hub/tests/test_publish.py",
+      "sha256": "2381a0401c14f6067c83ec4ff09adbce02bb7b9b12b780915cc9f51c16663668",
+      "bytes": 3177
+    },
+    {
+      "path": "server/production/backup/server2/trading-hub/tests/test_recovery.py",
+      "sha256": "3de949502bc2ee1b2437ffa008c89b0789d957f34798ccfc36fea779b494d881",
+      "bytes": 2196
+    }
+  ]
+}
