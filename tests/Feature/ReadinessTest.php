@@ -18,7 +18,17 @@ class ReadinessTest extends TestCase
 
     public function test_migrated_local_app_reports_backend_configuration_honestly(): void
     {
-        $this->get('/ready')->assertOk()->assertJsonPath('research', 'unconfigured');
+        config(['session.driver' => 'database']);
+        $this->get('/ready')->assertOk()->assertJsonPath('research', 'unconfigured')
+            ->assertCookieMissing(config('session.cookie'));
+    }
+
+    public function test_unmigrated_database_sessions_do_not_prevent_an_unavailable_response(): void
+    {
+        config(['session.driver' => 'database']);
+        Schema::drop('sessions');
+
+        $this->getJson('/ready')->assertStatus(503)->assertJsonPath('status', 'unavailable');
     }
 
     public function test_production_candidate_cannot_be_ready_with_plain_http_or_insecure_session_cookies(): void

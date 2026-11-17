@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ReadinessController;
 use App\Http\Middleware\EnsureApprovedMembership;
 use App\Http\Middleware\EnsureSecurityEnrollment;
 use App\Http\Middleware\HandleAppearance;
@@ -10,6 +11,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -17,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        then: fn () => Route::get('/ready', ReadinessController::class),
     )
     ->withMiddleware(function (Middleware $middleware): void {
 

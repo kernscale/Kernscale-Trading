@@ -2,6 +2,8 @@
 
 Goal: complete the approved unified Laravel Trading Hub. User authorized local auth/isolation with `ack execute` and subsequently supplied `ack release`. The user then deferred administrator access and redirected work to frontend design review; host installation/cutover remain deferred. Do not request release approval again when that work resumes.
 
+Current ownership (17 November): Claude owns frontend work. Codex owns backend functionality and runtime/deployment readiness. The frontend agent stopped before changing any files for the requested copy reduction; preserve Claude's work and do not edit or stage frontend files. The earlier requested Research label rename is committed in97dafee.
+
 Baseline: official Laravel React starter kit commit `012f4248f70e255e32ad93f540aca5fb7e8c96fe` (no production state copied). New source repository is `products/Kernscale-Trading`; writable linked implementation checkout is `internal/Kernscale-Trading`, branch `codex/trading-hub`.
 
 ## Boundaries and acceptance
