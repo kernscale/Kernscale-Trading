@@ -1,5 +1,13 @@
 # Backend runtime validation
 
+Current accepted CI candidate: `27aff1b79afc4672eaecc386ffb0faa72ffff67b`. [Private workflow44084167843](https://github.com/kernscale/Kernscale-Trading/actions/runs/44084167843) completed source validation, image publication and disposable Linux runtime checks successfully. The selected PostgreSQL paths passed **113 tests /529 assertions**; the pinned SDK streaming/session/metrics/native-status selection passed **33 tests** on Linux. Local native R1 adapter checks are recorded below. Claude's concurrent frontend edits are excluded from this candidate.
+
+Current application image: `ghcr.io/kernscale/kernscale-trading@sha256:aa220ff84be5dac7f63c048e9434c346a6b5c12137529efa56994e5566862359`. Downloaded image evidence checksums matched. Actual pulled image configuration, private package and exact source labels were verified. Runtime receipt verifies pre-migration503, migrated200, read-only UID10001, Laravel Redis roundtrip, running Horizon, scheduler loading without starting,23 built assets, Chrome login rendering and labelled-resource cleanup. It explicitly records **`ciRuntimeAccepted:true` / `productionRuntimeAccepted:false`**.
+
+Receipts: `.orchestration/cache/backend-runtime-44084167843/{image,runtime}/` and `backend-runtime-44084167843.log`. The Python bridge is separately installed from this exact private source commit; its Linux protocol fixtures do not prove actual protected-service user transport, cgroup isolation or a provider turn on Agents2.
+
+## Previous baseline
+
 Checked application source: `ec9e4cc8d5eb056be0ac255e1c6765963e7ce710`. [Private workflow44076111678](https://github.com/kernscale/Kernscale-Trading/actions/runs/44076111678) completed validation, publication and disposable Linux runtime jobs successfully. This proves the recorded CI scope, not production acceptance. Claude owns frontend implementation; these backend commits preserve its concurrent working-tree changes.
 
 Immutable application image: `ghcr.io/kernscale/kernscale-trading@sha256:d1ac80ca71f0360905ccb183569dcdb5ff9920c2522822d046ea4b0240e04164`.
@@ -32,13 +40,13 @@ Observed native revisions: TradingAgents `7e2522e7adab1b45af1ef0de8668fa8b42b868
 
 ## Remaining acceptance
 
-Ops/Agents2 administrator admission and host installation/cutover remain deferred. Still required: protected runtime identities and networking, installed artifact provenance, actual Linux UID/cgroup isolation, a real Go/R1 tool turn and continuation/cancellation, native feed/mark reconciliation, real mail delivery, measured off-host restore, canonical-origin authentication and route promotion/rollback. The goal remains incomplete. Subsequent additive metrics/history/status work is not covered by this image receipt until separately recorded.
+Ops/Agents2 administrator admission and host installation/cutover remain deferred. Still required: protected runtime identities and networking, installed artifact provenance, actual Linux UID/cgroup isolation, a real Go/R1 tool turn and continuation/cancellation, native feed/mark reconciliation, real mail delivery, measured off-host restore, canonical-origin authentication and route promotion/rollback. The goal remains incomplete. The current workflow above covers the additive metrics/history/status source; it does not close target-host acceptance.
 
 ## Following backend change: local validation
 
 - Full-period native history replaces the latest-1,000-raw-row truncation. Existing weekly/monthly/quarterly/yearly query values select the complete interval; bounded sampling retains original endpoints and decimal values without deleting observations. Dashboard/portfolio metrics remain unchanged. Valuation history, snapshot sync and dashboard selection: **13 tests /138 assertions passed**, exit0. Changed PHP files passed level7 PHPStan (serial `--debug`, after the sandbox denied its parallel loopback listener) and Pint.
 - Additive private `usage`, `context` and `r1_reader_usage` events whitelist observed counters and identify unverified runtime capacity. Missing/default usage and cost remain unknown. Native report outcomes preserve original receipt status, independent of systemd exit status. An empty regular enabled marker remains enabled. Root observation requires an explicit validated native user and local user transport; missing admission makes status unknown without querying root's bus.
 - Actual pinned OMP SDK plus the exact local R1 source ran **40 selected tests**, exit0 in4.511s, including metrics, streaming, session paths, native adapter and23 portfolio/status tests. Eight changed Python files passed syntax and the500-line source limit; scoped whitespace checks passed. No provider request, native write or host-policy change occurred. CI now selects the fast metrics/status modules as well as the existing SDK checks.
-- Receipts: `.orchestration/cache/backend-history-final.log`, `backend-history-phpstan.log`, `backend-bridge-final.log`. The next immutable-image workflow must qualify this source before claiming image acceptance. Claude's concurrent frontend working tree is excluded from these backend changes.
+- Receipts: `.orchestration/cache/backend-history-final.log`, `backend-history-phpstan.log`, `backend-bridge-final.log`. This source subsequently passed the current immutable-image workflow recorded above. Claude's concurrent frontend working tree is excluded from these backend changes.
 
 Skipped broad suites/repository-wide lint, local Docker startup, provider calls for the new protocol checks, native repairs and production host/domain changes.
