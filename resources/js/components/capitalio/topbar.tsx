@@ -39,7 +39,7 @@ export default function CapitalioTopbar() {
         : url.startsWith('/dashboard')
           ? 'Overview'
           : url.startsWith('/research')
-            ? 'R1 Research'
+            ? 'Research'
             : url.startsWith('/outputs')
               ? 'Agent outputs'
               : url.startsWith('/portfolio')

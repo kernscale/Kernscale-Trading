@@ -122,11 +122,11 @@ export default function Research({
     }, [activeRun?.id, events]);
     return (
         <MessageScrollerProvider>
-            <Head title="R1 Research" />
+            <Head title="Research" />
             <div className="research-workspace-page">
                 <PageHeading
                     eyebrow="Private research workspace"
-                    title="R1 Research"
+                    title="Research"
                 >
                     <Status>Go / DeepSeek · R1 tools</Status>
                 </PageHeading>
@@ -230,7 +230,7 @@ export default function Research({
                                                                 <MessageHeader>
                                                                     {message.role ===
                                                                     'assistant'
-                                                                        ? 'R1 Research'
+                                                                        ? 'Research'
                                                                         : message.role}
                                                                 </MessageHeader>
                                                                 <Bubble

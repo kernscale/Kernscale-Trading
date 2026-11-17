@@ -101,7 +101,7 @@ export default function CapitalioSidebar() {
     ];
     const operations: Item[] = [
         ...(researcher
-            ? [{ name: 'R1 Research', href: '/research', icon: SidebarAiIcon }]
+            ? [{ name: 'Research', href: '/research', icon: SidebarAiIcon }]
             : []),
         { name: 'Agent outputs', href: '/outputs', icon: SidebarFolderIcon },
         { name: 'Community', href: '/community', icon: UsersIcon },

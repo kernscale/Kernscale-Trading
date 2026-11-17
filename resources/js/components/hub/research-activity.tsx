@@ -44,7 +44,7 @@ export default function ResearchActivity({
             {tokens && (
                 <Message>
                     <MessageContent>
-                        <MessageHeader>R1 Research · live output</MessageHeader>
+                        <MessageHeader>Research · live output</MessageHeader>
                         <Bubble variant="ghost">
                             <BubbleContent className="text-sm leading-7">
                                 <Markdown>{tokens}</Markdown>
