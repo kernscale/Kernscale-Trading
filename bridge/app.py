@@ -9,7 +9,7 @@ from uuid import UUID
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
-from bridge.store import Conflict, Store, TERMINAL
+from bridge.store import Conflict, Store
 from bridge.workspace_tools import Workspace
 
 SCOPE = 'kernscale-trading'
@@ -125,11 +125,14 @@ def create_app(store=None, executor=None, token=None):
 
     @app.post('/v1/researchers/{researcher}/runs/{run_id}/cancel', dependencies=[Depends(authenticate)])
     def cancel(researcher: int, run_id: UUID):
-        row = scoped(str(researcher), run_id)
-        status = row['status']
-        if status not in TERMINAL:
-            status = store.transition(str(researcher), str(run_id), 'cancel_requested')
+        if researcher < 1:
+            raise HTTPException(403, 'scope mismatch')
+        try:
+            status, admitted = store.request_cancel(str(researcher), str(run_id))
+        except KeyError:
+            raise HTTPException(404, 'run not found') from None
+        if admitted and status == 'cancel_requested':
             executor.cancel(str(run_id))
-        return {'id': row['id'], 'status': status}
+        return {'id': str(run_id), 'status': status}
 
     return app

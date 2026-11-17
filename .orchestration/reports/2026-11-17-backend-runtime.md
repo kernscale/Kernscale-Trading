@@ -1,6 +1,6 @@
 # Backend runtime validation
 
-Current accepted CI candidate: `27aff1b79afc4672eaecc386ffb0faa72ffff67b`. [Private workflow44084167843](https://github.com/kernscale/Kernscale-Trading/actions/runs/44084167843) completed source validation, image publication and disposable Linux runtime checks successfully. The selected PostgreSQL paths passed **113 tests /529 assertions**; the pinned SDK streaming/session/metrics/native-status selection passed **33 tests** on Linux. Local native R1 adapter checks are recorded below. Claude's concurrent frontend edits are excluded from this candidate.
+Current accepted application-image candidate: `27aff1b79afc4672eaecc386ffb0faa72ffff67b`. [Private workflow44084167843](https://github.com/kernscale/Kernscale-Trading/actions/runs/44084167843) completed source validation, image publication and disposable Linux runtime checks successfully. The selected PostgreSQL paths passed **113 tests /529 assertions**; the pinned SDK streaming/session/metrics/native-status selection passed **33 tests** on Linux. Local native R1 adapter checks are recorded below. Claude's concurrent frontend edits are excluded from this candidate.
 
 Current application image: `ghcr.io/kernscale/kernscale-trading@sha256:aa220ff84be5dac7f63c048e9434c346a6b5c12137529efa56994e5566862359`. Downloaded image evidence checksums matched. Actual pulled image configuration, private package and exact source labels were verified. Runtime receipt verifies pre-migration503, migrated200, read-only UID10001, Laravel Redis roundtrip, running Horizon, scheduler loading without starting,23 built assets, Chrome login rendering and labelled-resource cleanup. It explicitly records **`ciRuntimeAccepted:true` / `productionRuntimeAccepted:false`**.
 
@@ -50,3 +50,21 @@ Ops/Agents2 administrator admission and host installation/cutover remain deferre
 - Receipts: `.orchestration/cache/backend-history-final.log`, `backend-history-phpstan.log`, `backend-bridge-final.log`. This source subsequently passed the current immutable-image workflow recorded above. Claude's concurrent frontend working tree is excluded from these backend changes.
 
 Skipped broad suites/repository-wide lint, local Docker startup, provider calls for the new protocol checks, native repairs and production host/domain changes.
+
+## Local recovery-engine qualification
+
+Operations' exact candidate scope remains `server/production/backup/server2/trading-hub/`, recorded in `docs/deployment/receipts/operations-manifest.json`. Added a nearest-scope integration check using installed Restic0.19.0 and a temporary encrypted local repository, protected synthetic password file and scrubbed environment. It runs the actual capture/publisher/Restic backup/readback/checksum paths, validates a restored synthetic SQLite database captured with an open WAL connection, preserves the source logical rows and rejects corrupted capture input before another Restic operation. Existing snapshots remain unchanged on that failure. No production data, credentials, SSH transport or retention deletion is used.
+
+The test substitutes only the SFTP repository transport with the exact local fixture. Its publisher return value is not independent off-host evidence. **14 nearest-scope tests passed**, exit0 in8.148s, including the real engine test; syntax and scoped whitespace checks passed. Receipts: Operations `.orchestration/cache/trading-hub-{restic-roundtrip,backup-checks}.log`. Temporary repositories/passwords/restored files were removed by the test. The Operations candidate is still uninstalled/uncommitted and is referenced by exact file hashes.
+
+This proves local archive mechanics only. Actual SFTP publication, PostgreSQL/application/key restoration, cross-host consistency, canonical-origin auth and measured one-hour RPO/four-hour RTO remain unverified. Production availability, backup execution and recovery readiness remain separate unknown states.
+
+## Durable pre-admission cancellation follow-up
+
+Reproduced a real Stop race: Laravel commits `dispatching`, but cancellation reaches the bridge before its first PUT. The old404 response leaves `cancel_requested`; dispatch skips admission and reconciliation repeats404 forever. Red receipts are `.orchestration/cache/research-cancellation-red.log` and the PHP lane's focused reproduction. No UI changes are required.
+
+The bridge now records researcher/run-UUID cancellation receipts separately under the same SQLite write lock as admission. A committed pre-admission receipt returns `cancelled`; late PUT returns409 without an executor submission. Foreign identities get404, receipts survive restart, and no session/request/event is fabricated. Already admitted work remains `cancel_requested` until actual confirmation. Laravel's committed dispatch claim is unchanged, including after ambiguous transport failure; no network-spanning database transaction or false404 acknowledgement was introduced. [Protocol contract](../../docs/api/research-cancellation.md).
+
+Root checks: **19 bridge API/SQLite tests passed**, exit0 in0.215s, and **31 selected PHP tests /117 assertions passed**, exit0. PHP tests use HTTP fakes; actual durability/late-PUT rejection are verified independently by the bridge tests. Python/TOML/CI Bash syntax, scoped Pint and whitespace checks passed. Local API tests reused pre-existing FastAPI0.109.2/HTTPX0.26.0, older than the declared runtime floor; the source workflow now installs the actual declared bridge dependencies, pinned SDK and explicit HTTPX0.28.1 test extra before Linux protocol checks. No global dependency changes occurred. Receipts: `backend-cancellation-{php,bridge}-final.log`.
+
+This is a bridge-only runtime correction; the Laravel application runtime/image inputs are unchanged from the accepted image above. Linux source qualification and exact private bridge commit must be recorded separately. No unchanged image rebuild or target installation is claimed.

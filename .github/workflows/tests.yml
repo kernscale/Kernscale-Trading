@@ -91,6 +91,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m venv "$RUNNER_TEMP/omp-sdk-tests"
-          OMP_TEST_REQUIREMENT="$(python3 -c 'import tomllib; print(next(item for item in tomllib.load(open("bridge/pyproject.toml", "rb"))["project"]["dependencies"] if item.startswith("omp-rpc @ ")))')"
-          "$RUNNER_TEMP/omp-sdk-tests/bin/pip" install --quiet --no-input "$OMP_TEST_REQUIREMENT"
-          "$RUNNER_TEMP/omp-sdk-tests/bin/python" -B -m unittest bridge.tests.test_research_metrics bridge.tests.test_omp_stream bridge.tests.test_session_paths bridge.tests.test_portfolio -v
+          python3 - <<'PY'
+          import os, pathlib, tomllib
+          project = tomllib.load(open('bridge/pyproject.toml', 'rb'))['project']
+          requirements = project['dependencies'] + project['optional-dependencies']['test']
+          pathlib.Path(os.environ['RUNNER_TEMP'], 'omp-sdk-tests', 'requirements.txt').write_text('\n'.join(requirements) + '\n')
+          PY
+          "$RUNNER_TEMP/omp-sdk-tests/bin/pip" install --quiet --no-input -r "$RUNNER_TEMP/omp-sdk-tests/requirements.txt"
+          "$RUNNER_TEMP/omp-sdk-tests/bin/python" -c 'from importlib.metadata import version; print({name: version(name) for name in ("omp-rpc", "fastapi", "httpx", "starlette")})'
+          "$RUNNER_TEMP/omp-sdk-tests/bin/python" -B -m unittest bridge.tests.test_research_metrics bridge.tests.test_omp_stream bridge.tests.test_session_paths bridge.tests.test_portfolio bridge.tests.test_bridge -v

@@ -8,6 +8,9 @@ use App\Models\ResearchSession;
 use App\Models\User;
 use App\Services\ResearchCoordinator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -152,5 +155,72 @@ class ResearchDispatchStateTest extends TestCase
         $this->assertNull($this->run->fresh()->completed_at);
         Http::assertSentCount(2);
         Http::assertSent(fn ($request) => $request->method() === 'POST' && str_ends_with($request->url(), '/cancel'));
+    }
+
+    public function test_durable_pre_admission_cancel_receipt_unblocks_session_without_a_prompt_put(): void
+    {
+        ResearchRun::whereKey($this->run->id)->update(['status' => 'dispatching']);
+        Http::fake(['bridge.test/v1/researchers/*/runs/*/cancel' => Http::response(['id' => $this->run->id, 'status' => 'cancelled'])]);
+        $this->service->cancel($this->run);
+        $this->service->dispatch($this->run);
+        $this->artisan('trading:reconcile')->assertSuccessful();
+        $this->assertSame('cancelled', $this->run->fresh()->status);
+        $this->assertNotNull($this->run->fresh()->completed_at);
+        $next = $this->service->start($this->user, $this->session, 'Next authorized turn', 'next-after-cancellation');
+        $this->assertSame('queued', $next->status);
+        Http::assertNotSent(fn ($request) => $request->method() === 'PUT');
+        Http::assertSentCount(1);
+    }
+
+    public function test_missing_or_unavailable_cancellation_response_never_confirms_cancellation(): void
+    {
+        ResearchRun::whereKey($this->run->id)->update(['status' => 'dispatching']);
+        Http::fake(['bridge.test/v1/researchers/*/runs/*/cancel' => Http::sequence()->push(['detail' => 'run not found'], 404)->push(['detail' => 'unavailable'], 503)]);
+        foreach ([404, 503] as $status) {
+            try {
+                $this->service->cancel($this->run);
+                $this->fail('A failed cancellation must not be confirmed.');
+            } catch (RequestException $error) {
+                $this->assertSame($status, $error->response->status());
+            }
+            $this->assertSame('cancel_requested', $this->run->fresh()->status);
+            $this->assertNull($this->run->fresh()->completed_at);
+        }
+        $this->service->dispatch($this->run);
+        Http::assertNotSent(fn ($request) => $request->method() === 'PUT');
+    }
+
+    public function test_timed_out_put_preserves_durable_claim_and_does_not_replay_prompt_on_cancel(): void
+    {
+        $puts = 0;
+        $transactionLevel = DB::transactionLevel();
+        Http::fake(function ($request) use (&$puts, $transactionLevel) {
+            if ($request->method() === 'PUT') {
+                $puts++;
+                // A transaction spanning admission could roll the claim back after process death.
+                $this->assertSame($transactionLevel, DB::transactionLevel());
+                $this->assertSame('dispatching', $this->run->fresh()->status);
+                throw new ConnectionException('Synthetic timeout after an ambiguously accepted PUT');
+            }
+
+            return Http::response(['detail' => 'run not found'], 404);
+        });
+        try {
+            $this->service->dispatch($this->run);
+            $this->fail('Ambiguous dispatch should report the connection failure.');
+        } catch (ConnectionException) {
+            $this->assertSame('dispatching', $this->run->fresh()->status);
+        }
+        try {
+            $this->service->cancel($this->run);
+            $this->fail('Missing cancellation acknowledgement should remain pending.');
+        } catch (RequestException) {
+            $this->assertSame('cancel_requested', $this->run->fresh()->status);
+        }
+        $this->service->dispatch($this->run);
+        (new DispatchResearch($this->run->id))->failed(null);
+        $this->assertSame('cancel_requested', $this->run->fresh()->status);
+        $this->assertNull($this->run->fresh()->completed_at);
+        $this->assertSame(1, $puts);
     }
 }

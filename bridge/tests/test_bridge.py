@@ -93,6 +93,83 @@ class BridgeTest(unittest.TestCase):
         self.store.transition('1', self.run, 'cancelled')
         self.assertEqual(self.store.transition('1', self.run, 'completed'), 'cancelled')
 
+    def test_cancel_before_admission_returns_durable_idempotent_receipt(self):
+        expected = {'id': self.run, 'status': 'cancelled'}
+        response = self.client.post(self.url + '/cancel', headers=HEADERS)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), expected)
+        self.assertEqual(self.client.post(self.url + '/cancel', headers=HEADERS).json(), expected)
+        # Store connections close after each operation; reopen and start a fresh coordinator.
+        self.app.state.run_pool.shutdown(wait=True)
+        reopened = Store(self.store.path)
+        restarted_executor = FakeExecutor()
+        restarted = create_app(reopened, restarted_executor, TOKEN)
+        with TestClient(restarted) as client:
+            self.assertEqual(client.post(self.url + '/cancel', headers=HEADERS).json(), expected)
+            self.assertEqual(client.put(self.url, headers=HEADERS, json=self.body).status_code, 409)
+            self.assertEqual(client.get(self.url, headers=HEADERS).status_code, 404)
+            self.assertEqual(client.get(self.url + '/events', headers=HEADERS).status_code, 404)
+        self.assertEqual(restarted_executor.dispatched, [])
+        self.assertEqual(restarted_executor.cancelled, [])
+        with reopened.connect() as db:
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM runs').fetchone()[0], 0)
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM sessions').fetchone()[0], 0)
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM events').fetchone()[0], 0)
+
+    def test_cancel_before_put_prevents_late_executor_submission(self):
+        self.client.post(self.url + '/cancel', headers=HEADERS)
+        response = self.create()
+        self.app.state.run_pool.shutdown(wait=True)
+        self.assertEqual(self.executor.dispatched, [])
+        self.assertEqual(response.status_code, 409)
+
+    def test_pre_admission_cancel_scope_and_positive_researcher(self):
+        other = self.url.replace('/researchers/1/', '/researchers/2/')
+        invalid = self.url.replace('/researchers/1/', '/researchers/0/')
+        self.assertEqual(self.client.post(invalid + '/cancel', headers=HEADERS).status_code, 403)
+        self.assertEqual(self.client.post(self.url + '/cancel', headers=HEADERS).status_code, 200)
+        self.assertEqual(self.client.post(other + '/cancel', headers=HEADERS).status_code, 404)
+        self.assertEqual(self.client.put(other, headers=HEADERS, json=self.body).status_code, 404)
+        self.assertEqual(self.client.post(self.url + '/cancel', headers=HEADERS).json()['status'], 'cancelled')
+        with self.store.connect() as db:
+            rows = db.execute('SELECT researcher FROM pre_admission_cancellations').fetchall()
+        self.assertEqual([row['researcher'] for row in rows], ['1'])
+
+    def test_store_rejects_invalid_cancellation_identity_without_receipt(self):
+        for researcher in ('0', '-1', '', 'other', '\u0661', 1):
+            with self.subTest(researcher=researcher), self.assertRaises(ValueError):
+                self.store.request_cancel(researcher, self.run)
+        self.assertEqual(self.client.post(self.url.replace(self.run, 'not-a-uuid') + '/cancel', headers=HEADERS).status_code, 422)
+        with self.store.connect() as db:
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM pre_admission_cancellations').fetchone()[0], 0)
+
+    def test_pre_admission_receipt_does_not_bind_or_reserve_session(self):
+        self.store.request_cancel('1', self.run)
+        with self.assertRaises(Conflict):
+            self.store.create('1', self.run, self.body)
+        with self.assertRaises(KeyError):
+            self.store.request_cancel('2', self.run)
+        with self.assertRaises(KeyError):
+            self.store.create('2', self.run, self.body)
+        # Only the run UUID is terminal: an independent run can still use the session.
+        row, created = self.store.create('2', str(uuid4()), self.body)
+        self.assertTrue(created)
+        self.assertEqual(row['researcher'], '2')
+
+    def test_admission_before_cancel_keeps_actual_run_pending(self):
+        self.assertEqual(self.create().status_code, 200)
+        other = self.url.replace('/researchers/1/', '/researchers/2/')
+        self.assertEqual(self.client.post(other + '/cancel', headers=HEADERS).status_code, 404)
+        self.assertEqual(self.store.get('1', self.run)['status'], 'queued')
+        for _ in range(2):
+            self.assertEqual(self.client.post(self.url + '/cancel', headers=HEADERS).json()['status'], 'cancel_requested')
+        self.assertEqual(self.create().json()['status'], 'cancel_requested')
+        self.app.state.run_pool.shutdown(wait=True)
+        self.assertEqual(self.executor.dispatched, [self.run])
+        self.assertEqual(self.executor.cancelled, [self.run, self.run])
+        with self.store.connect() as db:
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM pre_admission_cancellations').fetchone()[0], 0)
+
     def test_restart_interrupts_without_replay(self):
         self.create()
         self.store.reconcile()

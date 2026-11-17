@@ -7,5 +7,8 @@ dependencies = [
   "uvicorn>=0.30,<1",
   "omp-rpc @ git+https://github.com/can1357/oh-my-pi.git@6f03614d761366972e80e84e25d1418ed678d2c7#subdirectory=sdk/python/omp-rpc",
 ]
+[project.optional-dependencies]
+test = ["httpx==0.28.1"]
+
 # Install Trading-R1 independently from the operator's pinned checkout:
 # 816efb4643a7c33e2943b1a64f08971638f517e0. No R1 service is started.

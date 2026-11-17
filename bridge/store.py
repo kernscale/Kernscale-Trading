@@ -43,6 +43,8 @@ class Store:
                     id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL,
                     type TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL);
                 CREATE INDEX IF NOT EXISTS event_run ON events(run_id, id);
+                CREATE TABLE IF NOT EXISTS pre_admission_cancellations (
+                    id TEXT PRIMARY KEY, researcher TEXT NOT NULL, created_at TEXT NOT NULL);
             ''')
 
     @contextmanager
@@ -68,6 +70,11 @@ class Store:
                 if existing['digest'] != digest:
                     raise Conflict('run ID already used with another request')
                 return dict(existing), False
+            cancelled = db.execute('SELECT researcher FROM pre_admission_cancellations WHERE id=?', (run_id,)).fetchone()
+            if cancelled:
+                if cancelled['researcher'] != researcher:
+                    raise KeyError(run_id)
+                raise Conflict('run ID cancelled before admission')
             session = db.execute('SELECT researcher FROM sessions WHERE id=?', (body['session_id'],)).fetchone()
             if session and session['researcher'] != researcher:
                 raise KeyError(body['session_id'])
@@ -79,6 +86,29 @@ class Store:
                        (run_id, researcher, body['session_id'], digest, encoded, 'queued', now()))
             self._event(db, run_id, 'status', {'status': 'queued'})
         return self.get(researcher, run_id), True
+
+    def request_cancel(self, researcher, run_id):
+        """Return committed status and whether a real run was admitted, under admission's lock."""
+        if not isinstance(researcher, str) or not researcher.isascii() or not researcher.isdecimal() or int(researcher) < 1:
+            raise ValueError('researcher must be positive')
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row = db.execute('SELECT researcher,status FROM runs WHERE id=?', (run_id,)).fetchone()
+            if row:
+                if row['researcher'] != researcher:
+                    raise KeyError(run_id)
+                status = row['status']
+                if status not in TERMINAL and status != 'cancel_requested':
+                    status = 'cancel_requested'
+                    db.execute('UPDATE runs SET status=? WHERE id=?', (status, run_id))
+                    self._event(db, run_id, 'status', {'status': status})
+                return status, True
+            receipt = db.execute('SELECT researcher FROM pre_admission_cancellations WHERE id=?', (run_id,)).fetchone()
+            if receipt and receipt['researcher'] != researcher:
+                raise KeyError(run_id)
+            if not receipt:
+                db.execute('INSERT INTO pre_admission_cancellations VALUES (?,?,?)', (run_id, researcher, now()))
+            return 'cancelled', False
 
     def get(self, researcher, run_id):
         with self.connect() as db:
