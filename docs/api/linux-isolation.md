@@ -24,7 +24,7 @@ settings are changed.
 Before mutation, the script checks Linux/root, exact GitHub repository/main/manual
 event/hosted-runner metadata, canonical numeric run ID and attempt, expected SHA
 against both GitHub SHA and clean checkout HEAD, and exact checkout workspace.
-It refuses existing or dangling-symlink resource paths and unsafe `/opt`
+It refuses existing or dangling-symlink resource paths and unsafe `/var/lib`
 ancestors. It probes a writable cgroup v2 mount and required files, then tests
 actual creation and `cgroup.kill` availability. Unsupported prerequisites produce
 an explicit nonzero, unqualified receipt; they do not silently skip or pass.
@@ -32,7 +32,7 @@ an explicit nonzero, unqualified receipt; they do not silently skip or pass.
 Only these exact disposable roots are created:
 
 ```text
-/opt/kth-ci-<run-id>-<attempt>
+/var/lib/kth-ci-<run-id>-<attempt>
 /sys/fs/cgroup/kth-ci-<run-id>-<attempt>
 ```
 

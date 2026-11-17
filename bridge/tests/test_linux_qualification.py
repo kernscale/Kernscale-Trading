@@ -20,7 +20,7 @@ class LinuxQualificationGuards(unittest.TestCase):
 
     def test_exact_paths_and_environment_required(self):
         self.assertEqual(guarded_paths(self.env, self.sha, platform='linux', uid=0),
-            (Path('/opt/kth-ci-1234-2'), Path('/sys/fs/cgroup/kth-ci-1234-2')))
+            (Path('/var/lib/kth-ci-1234-2'), Path('/sys/fs/cgroup/kth-ci-1234-2')))
         for key in self.env:
             with self.subTest(key=key), self.assertRaises(RuntimeError):
                 guarded_paths({**self.env, key: 'other'}, self.sha, platform='linux', uid=0)

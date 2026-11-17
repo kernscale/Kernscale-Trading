@@ -30,7 +30,7 @@ def guarded_paths(env, expected_sha, *, platform, uid):
     require(re.fullmatch('[0-9a-f]{40}', expected_sha or '') is not None and env.get('GITHUB_SHA') == expected_sha)
     require(all(re.fullmatch('[1-9][0-9]{0,19}', env.get(key, '')) for key in ('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT')))
     name = 'kth-ci-' + env['GITHUB_RUN_ID'] + '-' + env['GITHUB_RUN_ATTEMPT']
-    return Path('/opt') / name, Path('/sys/fs/cgroup') / name
+    return Path('/var/lib') / name, Path('/sys/fs/cgroup') / name
 
 
 def protected(path):
