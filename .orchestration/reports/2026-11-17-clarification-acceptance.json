@@ -1,0 +1,93 @@
+{
+  "workflowRun": 44170647416,
+  "runtime": {
+    "image": "ghcr.io/kernscale/kernscale-trading@sha256:e45ab05aff65c2c6fd9334ed90fd7b221054d4360b95cd8d77877843926db50e",
+    "sourceCommit": "8e9f10cd38fcc5819f005c12c45224ae6f9db02d",
+    "ciRuntimeAccepted": true,
+    "productionRuntimeAccepted": false,
+    "checks": {
+      "beforeMigrations": 503,
+      "migratedReadiness": 200,
+      "readonlyUid": 10001,
+      "laravelRedisRoundtrip": true,
+      "pdfAttachmentStorage": true,
+      "horizon": true,
+      "schedulerLoadedWithoutStarting": true,
+      "loginAndAssets": {
+        "status": 200,
+        "assets": 23
+      },
+      "chromeLogin": true
+    },
+    "cleanupVerified": true
+  },
+  "sourceChecks": {
+    "postgresqlPassed": 196,
+    "postgresqlAssertions": 1237,
+    "sdkApiPassed": 68,
+    "sdkApiSkipped": 1,
+    "skipReason": "separate admitted R1 pin absent on public CI runner; actual native R1 test passed locally"
+  },
+  "linuxWorkflowRun": 44169130318,
+  "linuxQualification": {
+    "Agents2Accepted": false,
+    "R1": false,
+    "actualOmp": false,
+    "checks": {
+      "cgroupV2": true,
+      "identity1": {
+        "ambientCanaryAbsent": true,
+        "cgroupEmptyAndDescendantDead": true,
+        "cwd": true,
+        "descendantDetached": true,
+        "executorConfirmedCancelled": true,
+        "gid": true,
+        "homeOwned": true,
+        "identityMapDenied": true,
+        "otherHomeDenied": true,
+        "pendingQuestionCancelled": true,
+        "privateHome": true,
+        "supplementaryGroupsEmpty": true,
+        "syntheticCredentialOnly": true,
+        "uid": true,
+        "umask": true,
+        "waitingForInputPersisted": true
+      },
+      "identity2": {
+        "ambientCanaryAbsent": true,
+        "cgroupEmptyAndDescendantDead": true,
+        "cwd": true,
+        "descendantDetached": true,
+        "executorConfirmedCancelled": true,
+        "gid": true,
+        "homeOwned": true,
+        "identityMapDenied": true,
+        "otherHomeDenied": true,
+        "pendingQuestionCancelled": true,
+        "privateHome": true,
+        "supplementaryGroupsEmpty": true,
+        "syntheticCredentialOnly": true,
+        "uid": true,
+        "umask": true,
+        "waitingForInputPersisted": true
+      },
+      "prerequisites": true,
+      "writableCgroupMount": true
+    },
+    "cleanupVerified": true,
+    "productionSystemd": false,
+    "provider": false,
+    "qualified": true,
+    "sourceCommit": "70057523193f0751ead7519903acb6060fd122aa"
+  },
+  "qualifiedLinuxComponentSha256": {
+    "bridge/__init__.py": "2e6808395c7691027078ce249a6f12b2068d77675d326aae1d7b23ecd6868709",
+    "bridge/executor.py": "cdcc840302c4045a0e017d24ca173f33bab42821f274823a93a0f5cb1cc9178a",
+    "bridge/store.py": "3a14366060597dcb22fa3ffb2bde2b9ed2142cfa70886993863bab986c53f15b",
+    "bridge/network.py": "be55492cef3e6c4e580d5c34155b973448f39f94dfa8e6c4fba604e8e46acdc4",
+    "bridge/clarification_channel.py": "71291f330270cfd132b35649d4a72fda93bd9531b8a65349c165956a31c5c932",
+    "bridge/clarifications.py": "7cbe45b304e63f3f1c1e61134e1095ea8cab5f9049ffb37ca994bc8f931b92e0",
+    "bridge/tests/linux_worker.py": "03fe7095185d7d6b1885557e72b06feeb110cafac0d7e7ef5a5f9933e6eaddd9",
+    "bridge/tests/qualify_linux.py": "1e2df5b16e9b25115feb8c44f5c6bea9995b3c9583121f3e6f82c6940a0b6f74"
+  }
+}

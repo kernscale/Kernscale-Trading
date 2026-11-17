@@ -1,94 +1,93 @@
-# Structured research clarification
+# Structured research clarification acceptance
 
-Implementation based on source `801c1ccf0cd3b56e6b2e4c08f0383753507e1d8e`.
-Claude retains all frontend ownership. Existing execution/release approvals apply;
-this work does not install or enable the target services.
+Backend source `8e9f10cd38fcc5819f005c12c45224ae6f9db02d` is published in the
+private owning repository. Claude retains frontend ownership; no `resources/**`
+changes were included. Existing execution/release approvals apply. This is source
+and disposable-runtime acceptance, not a target installation or domain cutover.
 
-## Acceptance checks
+## Result
 
-- Actual pinned SDK host-tool transport pauses for the researcher's structured
-  answer and continues the same turn with the canonical R1 tool result.
-- Coordinator SQLite commits a private question/request and answer receipt before
-  delivery. Accepted and consumed are distinct; replay cannot change an answer.
-- Question IDs and freeform answers are validated against the original request.
-  Cross-researcher access, cancelled/expired requests and conflicting replies fail.
-- A 300-second technical deadline matches the pinned R1 service default. Expiry
-  returns an explicit no-answer result, never the recommended option.
-- Waiting survives browser disconnect through ordered event replay. Cancellation
-  still fences the actual worker/cgroup; restart interrupts rather than replaying
-  prompts or pretending a dead process can resume its question.
-- Laravel revalidates current approved membership and exact session/run ownership.
-  Waiting remains active for single-flight, reconciliation and revocation.
-- Workspace proposal decisions reject pending proposals seven days after original
-  creation; replay does not extend expiry or repeat an already applied mutation.
-- Scoped PHP/Python checks precede private source/image validation and a fresh
-  actual Linux UID/cgroup check for the changed executor/store.
+The native R1 `ask_user` tool now pauses a turn for one to three structured
+questions. Private coordinator SQLite commits the question and answer before typed
+worker delivery; accepted and consumed are separate receipts. Question IDs,
+freeform answers, scope and replay are validated. Another researcher cannot answer;
+a changed replay conflicts. The 300-second native deadline returns an explicit
+no-answer result rather than choosing an option. Cancellation/restart closes
+requests without reopening calls or replaying prompts. Waiting uses an actual
+worker slot; it introduces no research-count or spending quota.
 
-Clarification is user input, not permission to trade or execute arbitrary tools.
-Memory tooling and unrelated R1 service globals remain outside this addition.
+Laravel revalidates current membership and exact private run/session ownership.
+`waiting_for_input` participates in single-flight, event collection, reconciliation
+and revocation. No new Laravel table is needed; existing saved events mirror the
+private bridge receipts. Clarification does not grant trading/tool authority.
+Pending workspace proposal decisions expire seven days after original creation;
+already-applied same-decision replay remains idempotent.
 
-## Local source acceptance
+A related shared-ingestion regression was reproduced and corrected: Stop,
+dispatch replay and answer acknowledgements cannot seal partial assistant text
+from a status-only terminal reply. Final events are collected first. True
+never-admitted cancellation receipts declare `events: []`, with no synthetic
+run/event rows; GET run/events still returns 404.
 
-The private Laravel answer route, all relevant waiting-state callers and native
-R1 tool/typed control channel are implemented. No new Laravel schema is required;
-the existing private coordinator SQLite recovery unit includes the new requests
-and receipts. A native specification description is overridden only to describe
-the actual no-default deadline behavior; its handler/schema/result are preserved.
+## Verification
 
-Combined Laravel clarification/proposal checks passed 28 tests/164 assertions.
-Level 7 PHPStan passed seven affected runtime files; changed-file Pint passed.
-The combined pinned SDK plus exact local R1/actual loopback HTTP, attachment,
-native-adapter, streaming, session and bridge selection passed 50 tests in 5.138s
-with no skips. Fixture-only source checks and independent read-only lifecycle
-review found no remaining blocker. UTF-8 byte-bound regression and inherited
-misleading tool-description corrections passed before this combined run.
+- Root final local PHP selection: 61 tests/348 assertions. Scoped level 7 PHPStan,
+  changed-file Pint, Python/workflow/shell syntax, source-size and whitespace passed.
+- Actual pinned SDK plus exact local R1, real loopback HTTP, attachments, native
+  adapter, stream, session and bridge selection: 50 tests/5.138s without skips.
+  After the narrow cancellation correction, 25 API/real-HTTP tests passed/0.712s.
+- [Private run 44170647416](https://github.com/kernscale/Kernscale-Trading/actions/runs/44170647416)
+  passed 196 selected PostgreSQL tests/1,237 assertions, candidate types, runtime
+  source and Capitalio-reference checks. SDK/API CI ran 69 tests: 68 passed and one
+  native-R1 method was skipped because that separate operator checkout is absent.
+  The local pinned R1 run exercised that method successfully.
+- [Linux run 44169130318](https://github.com/kernscale/Kernscale-Trading/actions/runs/44169130318)
+  qualified bridge source `70057523193f0751ead7519903acb6060fd122aa`. Both dedicated
+  identities persisted an actual coordinator waiting question, closed it on
+  cancellation, killed a detached descendant, emptied the cgroup and committed
+  cancelled. UID/GID/environment/private-file guards and cleanup all passed.
+  Every source/helper/fixture loaded by that qualification is byte-identical in
+  the final candidate. The later correction changes only PHP and the private
+  cancellation HTTP response/tests; no kernel-qualified component changed.
 
-Receipts: `.orchestration/cache/clarification-php-integration.log`,
-`clarification-phpstan.log`, `clarification-final-pint.log` and
-`clarification-combined-sdk-http.log`. The new public CI modules are selected
-explicitly. Its native-R1-specific method is unavailable when that separate
-operator checkout is absent; the local combined run exercised it successfully.
+The verified private Linux/amd64 image is
+`ghcr.io/kernscale/kernscale-trading@sha256:e45ab05aff65c2c6fd9334ed90fd7b221054d4360b95cd8d77877843926db50e`.
+Downloaded image checksums, exact source identity, private package visibility and
+runtime receipts matched. Actual container checks verified 503 before migrations,
+200 after, read-only UID 10001, Redis, PDF extraction/private storage, Horizon,
+scheduler definitions without starting producers, login plus 23 assets, Chrome
+and labelled resource cleanup. `ciRuntimeAccepted` is true;
+`productionRuntimeAccepted` is false. Superseded image run 44169124572 was cancelled
+during its build and has no accepted image/runtime claim.
 
-Fresh private image/source CI for the corrected candidate remains pending.
-The manual Linux fixture now persists a real coordinator question/wait state
-before cancellation and requires its closure alongside UID checks and the death
-of a detached descendant. It still replaces the OMP worker with a synthetic
-fixture; it does not establish actual Go/R1/provider or production acceptance.
+The [durable acceptance receipt](2026-11-17-clarification-acceptance.json) contains
+actual runtime/Linux fields and component hashes. Detailed logs are under
+`.orchestration/cache/clarification-*`, `clarification-final-runtime/` and
+`linux-isolation-44169130318/`.
 
-## Shared final-event correction and Linux evidence
+## Local recovery and remaining acceptance
 
-Additional focused regressions reproduced premature completion through Stop and
-idempotent dispatch replay, not only the new answer endpoint. Shared ingestion
-now waits for an actual event collection or full output before settling a
-metadata-only terminal receipt. A terminal-derived collection state may drain
-events after cancellation intent; genuinely active late replies cannot undo it.
-The never-admitted cancellation receipt now truthfully contains `events: []`;
-no synthetic run/event rows are created, and GET run/events still returns 404.
-The matched PHP fixtures and direct bridge protocol tests preserve this exception.
-Root's final affected lifecycle/dispatch/clarification/artifact/proposal selection
-passed 61 tests/348 assertions. The corrected bridge API plus real loopback HTTP
-selection passed 25 tests in 0.712s. Scoped formatting and whitespace checks passed.
-Logs: `clarification-final-php.log` and `clarification-final-api-http.log` in the
-private orchestration cache.
+The original preview ports/processes and scheduler were confirmed absent before
+restarting Laravel 8007, Vite 5177 and the local application scheduler. All three
+HTTP checks returned 200. A stale `trading:sync` overlap mutex was removed through
+Laravel's exact event helper only after no sync process was found. No other mutex,
+account or research data was reset. At 20:44:35 UTC the scheduler had refreshed
+status at 20:44:01 and reports at 20:44:02: 93 native receipts and 47 saved originals.
+This is observed feed recovery, not proof that every native research run succeeded.
 
-Superseded image run 44169124572 was cancelled during publication after source
-validation passed; it has no accepted image/runtime claim. The corrected candidate
-will receive fresh image/source qualification.
-
-Actual Linux manual run 44169130318 passed at bridge source
-`70057523193f0751ead7519903acb6060fd122aa`. Both dedicated identities passed
-all isolation checks, persisted `waiting_for_input`, closed their pending question
-on cancellation, killed the detached descendant and ended with an empty cgroup
-and confirmed cancelled executor. Cleanup verified. All protected source modules,
-schemas/channel helpers and qualification fixtures remain byte-identical after
-the separate PHP/private-HTTP correction. Receipts and component hashes are
-referenced in [the qualification contract](../../docs/api/linux-isolation.md).
-
-## Live deployment admission
-
-Read-only normal-account SSH checks at 20:02:40 UTC succeeded on both hosts but
-still found no Docker access or noninteractive sudo. Ops' helper inventory contains
-only `loki-ingress.sh`; no app root, installed bridge unit, identity file or dedicated
-bridge cgroup was observed. No helper or alternative privileged transport was used.
+Read-only normal SSH checks at 20:02:40 UTC still found no Docker/noninteractive
+sudo access or app-scoped deployment interface on Ops/Agents2. Ops listed only
+`loki-ingress.sh`; no app root, installed bridge unit, identity file or dedicated
+bridge cgroup was observed. No alternative privileged transport was used.
 Receipt: `.orchestration/cache/target-admission-2026-11-17-resumed.json`.
-Release permission is already recorded; admitted target access is still missing.
+Release permission is recorded; target admission remains missing.
+
+Actual installed Go/R1/provider and systemd qualification, native portfolio
+projection/reconciliation, canonical-origin authentication/mail, measured off-host
+restore, final frontend wiring and domain promotion remain required. Broad suites
+and production deployment were not run. The full-system goal is not complete.
+
+Frontend contracts: [clarifications](../../docs/api/research-clarifications.md),
+[proposal expiry](../../docs/api/workspace-proposals.md),
+[final-event/cancellation protocol](../../docs/api/research-cancellation.md) and
+[complete wiring map](../../docs/api/capability-integration.md).
