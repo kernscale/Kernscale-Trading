@@ -6,18 +6,18 @@
   "files": [
     {
       "path": "server/production/backup/server2/trading-hub/README.md",
-      "sha256": "4b0ccb9e86ef97b70d976eed52a097f51e53939b33a432db007672d0ba781c20",
-      "bytes": 4052
+      "sha256": "384c48052733b9dfe96a53d5eb2a4aae00f195c0b164c77d845f50dc617ccdbc",
+      "bytes": 4408
     },
     {
       "path": "server/production/backup/server2/trading-hub/RUNBOOK.md",
-      "sha256": "e69f4f4c7a3c0a0d1b03e2ccfa5af675a0fcf3520a75a4fe6902aaabb35b1e21",
-      "bytes": 4239
+      "sha256": "659abe13fb0a034d3dd8b110257301c42f799a632b9ad77fd4d8b5f4855327ca",
+      "bytes": 4571
     },
     {
       "path": "server/production/backup/server2/trading-hub/capture.py",
-      "sha256": "6ee74b399c96fa7477520ad324f7b36b2d59737798dd0041988d1a86d52104ec",
-      "bytes": 5667
+      "sha256": "50d610a584dea3d74885cc64863ff2c00d144a59119550cbdfb959fdc48f0db1",
+      "bytes": 6043
     },
     {
       "path": "server/production/backup/server2/trading-hub/publish.py",
@@ -26,13 +26,13 @@
     },
     {
       "path": "server/production/backup/server2/trading-hub/recovery.py",
-      "sha256": "37235fc787f53d3a5374f116dfb9981c4d5a72cc777ca4904526c77b7362cc48",
-      "bytes": 2629
+      "sha256": "152150350f9b04594415c23988a34f09aa882d18f2f418e4f375cb62682fde8f",
+      "bytes": 2659
     },
     {
       "path": "server/production/backup/server2/trading-hub/tests/test_capture.py",
-      "sha256": "0321a48d9f299715527c53c828a8c814162c867847f84bd66856803d1c74a804",
-      "bytes": 3174
+      "sha256": "8bd3544314be0c5b886857a0a52205d5c004ea808d274956b724c5f633de9772",
+      "bytes": 4025
     },
     {
       "path": "server/production/backup/server2/trading-hub/tests/test_publish.py",
@@ -41,13 +41,13 @@
     },
     {
       "path": "server/production/backup/server2/trading-hub/tests/test_recovery.py",
-      "sha256": "3de949502bc2ee1b2437ffa008c89b0789d957f34798ccfc36fea779b494d881",
-      "bytes": 2196
+      "sha256": "76babe28657393b28b877ea4620dfbdd4234caa6832fa2e81caf03dbb3ab4d43",
+      "bytes": 2517
     },
     {
       "path": "server/production/backup/server2/trading-hub/tests/test_restic_roundtrip.py",
-      "sha256": "13bd9a01739ac83fa048e6e2e0438b57394369c60ee3827cf25292d1403ac766",
-      "bytes": 4475
+      "sha256": "f2dbbc7b9120b0f2e112b496a0b524cfc31836f5dcb59898465c4ad32eb65d8d",
+      "bytes": 5344
     }
   ]
 }

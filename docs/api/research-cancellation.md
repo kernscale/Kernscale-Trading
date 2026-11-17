@@ -33,6 +33,14 @@ commits first, the ordinary admitted-run cancellation protocol applies. A failed
 commit cannot produce a successful receipt response. Receipts have no automatic
 expiry or purge.
 
+The coordinator SQLite database is persistent recovery state, including these
+receipts and admitted-run replay identities. The Operations recovery candidate
+captures it through a separate native online SQLite backup as
+`bridge-coordinator.sqlite`; a complete recovery unit requires
+`agents2-bridge-coordinator`. Restore and reconcile that database with the other
+recovery components while writers remain fenced, before accepting new research.
+Researcher transcript files alone do not preserve the cancellation barrier.
+
 ## Cancellation after admission
 
 For an admitted nonterminal run the bridge durably sets `cancel_requested` and
