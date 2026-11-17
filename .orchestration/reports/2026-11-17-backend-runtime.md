@@ -86,3 +86,20 @@ Both temporary numeric identities passed actual UID/GID drop, empty supplementar
 Earlier attempts44090900040 and44091343223 stopped before mutation: hosted-runner `/opt` is root-owned0777. The diagnostic captured `/var/lib` root-owned0755; only the generated source root moved there, retaining all guards and leaving global directory permissions intact. Local guard tests6 passed; Python/YAML/Bash syntax and scoped whitespace passed. Same-source [source run44091684569](https://github.com/kernscale/Kernscale-Trading/actions/runs/44091684569) passed116 selected PostgreSQL tests/549 assertions,52 SDK/API/metrics/status checks and existing targeted runtime/Capitalio guards.
 
 Receipts: `.orchestration/cache/linux-isolation-{44090900040,44091343223,44091684938}/`; full successful logs `linux-isolation-44091684938.log` and `backend-source-44091684569.log`. No image rebuild was needed: Laravel runtime inputs remain unchanged. This proves CI kernel/isolation primitives; physical authenticator, real provider/tool execution, actual target service confinement and off-host restore remain unqualified. [Qualification contract](../../docs/api/linux-isolation.md).
+
+## Target admission recheck and blocked audit
+
+Read-only pinned normal-account SSH checks at **2026-11-17 13:28:21–22 UTC**, exit0 on both targets, still cannot access Docker or run noninteractive sudo. A separate least-privilege check found `sudo -n -l` exits1 on both; no Trading Hub scope was observed. Ops' readable restricted-helper directory contains only `loki-ingress.sh`, unrelated to application deployment. Agents2's helper directory could not be inventoried. No new app root, installed bridge unit, identity file or dedicated bridge cgroup was observed. No helper was executed or alternative privileged route attempted. Raw sanitized observations: `.orchestration/cache/target-admission-2026-11-17.json`.
+
+The same target-administrator admission blocker has remained through the consecutive goal turns that completed metrics/history/status, durable cancellation/recovery capture and Linux CI isolation. Those turns made concrete source/CI progress. At this checkpoint the remaining live acceptance cannot proceed through the available interface, and frontend implementation is explicitly Claude-owned. Release approval remains recorded; another approval phrase is not the missing input.
+
+| Explicit requirement still open | Required authoritative evidence |
+| --- | --- |
+| One app installed on Server2 Ops with private Agents2 integration | Admitted administrator/interface, verified host/network identity, immutable installed artifacts, migrations/readiness and one queue/scheduler owner |
+| Real isolated OMP/R1 research and continuation/cancellation | A Go-backed tool turn under admitted dedicated identity/cgroup and actual service confinement, with persisted session/evidence and confirmed cancellation |
+| Native scheduled reports and paper portfolio reconciled in the installed hub | Installed read-only source paths, account/cash/quantity/order/mark reconciliation and saved-data/outage acceptance; native producers preserved |
+| Lean complete off-host recovery within objectives | Admitted repository/key access, exact SFTP snapshot readback, restored PostgreSQL/paper/coordinator/storage/research state and measured usable-service duration |
+| Canonical passkey/MFA/onboarding and mail | Actual target-origin authenticator/recovery flow and delivered mail; local/synthetic CI checks do not establish these |
+| Complete responsive frontend design and integrated release | Claude's completed source handoff, review/targeted acceptance, then private/public route promotion and rollback verification |
+
+The complete goal is unproven. The next necessary external input is an authenticated Ops/Agents2 administrator session or an admitted app-scoped interface; no passwords or keys need to be posted in chat. No production, frontend, native ledger or schedule changes occurred in this audit.
