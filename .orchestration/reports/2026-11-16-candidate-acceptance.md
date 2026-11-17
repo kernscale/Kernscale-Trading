@@ -1,8 +1,8 @@
 # Trading Hub local candidate acceptance
 
-Status: implemented and validated locally; **not deployed or production accepted**. The long-horizon goal remains active. Local auth/isolation has `ack execute`; no `ack release` has been received.
+Status: implemented and validated locally; **not deployed or production accepted**. The long-horizon goal remains active. Both `ack execute` and `ack release` are recorded. The owner deferred administrator access and host installation/cutover while prioritizing the exact Capitalio correction. The source below and its checks are the original historical candidate; the Capitalio acceptance receipt and subsequent release preparation supersede its design/publication status.
 
-Application source: `a4ae734ba9615223a647f82c112b4d331a73b5d9` on `codex/trading-hub`, tree `484bac1463f36cf29d0a865e22f91e7d8c6b709d`, based on official Laravel starter `012f4248f70e255e32ad93f540aca5fb7e8c96fe`. `git status --short` was empty after the implementation commit. This receipt and progress corrections are subsequent documentation only. Nothing was pushed or published.
+Application source: `a4ae734ba9615223a647f82c112b4d331a73b5d9` on `codex/trading-hub`, tree `484bac1463f36cf29d0a865e22f91e7d8c6b709d`, based on official Laravel starter `012f4248f70e255e32ad93f540aca5fb7e8c96fe`. `git status --short` was empty after the implementation commit. At that checkpoint nothing was pushed or published. Subsequent private source/image publication is recorded in [the release preparation receipt](2026-11-17-private-image-candidate.md).
 
 Canonical source checkout: `/Users/jonasknppel/Businesses/Kernscale/repositories/products/Kernscale-Trading`. Writable implementation checkout: `/Users/jonasknppel/Businesses/Kernscale/repositories/internal/Kernscale-Trading`. Native TradingAgents, Trading-CLI and Trading-R1 remain independently owned; their paper ledger, risk settings, timers and services were not changed.
 
@@ -69,7 +69,7 @@ Sanitized receipts and screenshots remain under `.orchestration/cache/acceptance
 
 ## Production gates
 
-1. Obtain `ack release` for publishing/installing this concrete candidate and canonical route cutover, as required by the global contract and root AGENTS.md.
+1. Release authorization is recorded. Keep host installation/cutover deferred until the owner resumes authenticated administrator admission; do not request the same release approval again.
 2. An authenticated OpsVM100 administrator or admitted app-scoped interface must inspect/admit Docker, ingress, exact allowlists, volumes and immutable image identity. Existing normal Ops login cannot access Docker or noninteractive sudo; the VM101 wrapper and PVE backup privilege are not deployment substitutes.
 3. Build and inspect the production image/assets; validate actual schema promotion/rollback and singleton worker fencing. Qualify Agents2 UID/cgroup confinement, installed artifact provenance, real Go/R1 tool turns and continuation/cancellation, and private Ops-to-Agents2 transport.
 4. Configure protected mail and canonical-origin passkeys/MFA, reconcile live native ledger/output projections and any explicitly reviewed legacy imports, and perform measured encrypted off-host restore. No one-hour RPO/four-hour RTO acceptance is claimed.

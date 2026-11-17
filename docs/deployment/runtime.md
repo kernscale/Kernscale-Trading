@@ -77,8 +77,11 @@ Focused offline validation:
 python3 deploy/tests/test_runtime.py
 ```
 
-No image build, container start, complete frontend build, migration, host
-mutation, route cutover or real recovery drill was run for this package.
+The initial package checks were offline. Subsequent private source/image
+publication and immutable image-config readback are recorded in
+`.orchestration/reports/2026-11-17-private-image-candidate.md`. Container boot,
+target migration, host admission, route cutover and real recovery remain
+unaccepted; image publication does not establish those outcomes.
 
 ## Read-only Ops observation
 

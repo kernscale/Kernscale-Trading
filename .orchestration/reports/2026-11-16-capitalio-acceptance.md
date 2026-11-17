@@ -1,6 +1,10 @@
 # Complete Capitalio correction — local acceptance
 
-Checked implementation: `27859f6c4ca5bfb3231820410cf83e65a2296c4b`, branch `codex/trading-hub`, tree `132659cb43948bb3cf0aa8a9dc71c7d3230b7780`. The worktree was clean after that commit. This receipt is subsequent documentation. No source/image push, host installation or domain cutover occurred.
+Checked implementation: `27859f6c4ca5bfb3231820410cf83e65a2296c4b`, branch `codex/trading-hub`, tree `132659cb43948bb3cf0aa8a9dc71c7d3230b7780`. The worktree was clean after that commit. At this browser acceptance checkpoint no source/image push, host installation or domain cutover occurred.
+
+Subsequent release preparation: the corrected frontend production build passed (`npm run build`, exit0, 3.39s; `.orchestration/cache/capitalio-production-build.log`). Source through `f67598679ae02121e322d5f6261e1a5f86d81df0` was published to the private owning repository; push validation passed. Host installation/cutover remains deferred. The original browser and source checks below remain scoped to their recorded revision.
+
+The [17 November private image receipt](2026-11-17-private-image-candidate.md) records successful publication and actual immutable image-config verification through `86cd966c678d5aaf74b752beb7731691bf2bac0b`. Its application frontend is unchanged from the accepted Capitalio correction.
 
 The owner rejected the earlier visual interpretation and required the complete selected registry design. The new implementation preserves all twelve original source files byte-for-byte in `resources/js/components/watermelon/capitalio-dashboard/`, guarded by `docs/design-references/capitalio-source-manifest.json` and `tests/Design/test_capitalio_reference.py`. Registry SHA256: `8ca7f46ec8b0dedd5708b36391aae9aa0f131ddd2eddc644bc76e31c0d5d97c5`.
 
