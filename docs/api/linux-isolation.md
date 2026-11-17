@@ -12,9 +12,9 @@ executes the script directly (not `python -m`):
 /usr/bin/python3 -B bridge/tests/qualify_linux.py --expected-sha "$GITHUB_SHA"
 ```
 
-The parent receives the existing declared HTTPX dependency through a disposable
-runner dependency directory. `bridge/network.py` imports HTTPX, although no
-network operation occurs. The admitted child receives only the executor's
+The parent receives HTTPX and the existing Pydantic validation dependency through
+a disposable runner dependency directory. No provider/network operation occurs.
+The admitted child receives only the executor's
 sanitized environment and protected source PYTHONPATH; its fixture is stdlib-only.
 No global packages, accounts, services, mounts, cgroup delegation, or production
 settings are changed.
@@ -98,3 +98,21 @@ root-owned0755; the disposable root moved there with every ownership guard
 preserved. No existing runner directory permissions were changed. Receipts are
 under `.orchestration/cache/linux-isolation-<run-id>/`; successful logs are
 `linux-isolation-44091684938.log` and `backend-source-44091684569.log`.
+
+## Clarification qualification
+
+Bridge source `70057523193f0751ead7519903acb6060fd122aa` passed
+[manual run 44169130318](https://github.com/kernscale/Kernscale-Trading/actions/runs/44169130318).
+The protected copy additionally includes the exact clarification schema/channel
+helpers, with checked import origins. Both synthetic identities persisted an
+actual coordinator `waiting_for_input` question before cancellation; each question
+closed as cancelled, its cgroup emptied, its detached descendant died and the
+executor committed `cancelled`. Every identity/environment/private-file check
+and final cleanup passed. This still uses a synthetic worker and leaves the same
+OMP/R1/provider/systemd/Agents2 exclusions false.
+
+The later Laravel ingestion/private cancellation-HTTP correction did not change
+any source/helper/fixture loaded by this qualification; root verified every such
+file byte-for-byte against the qualified commit. Exact receipt and component
+hashes are in `.orchestration/cache/linux-isolation-44169130318/` and
+`.orchestration/cache/clarification-qualified-components.json`.

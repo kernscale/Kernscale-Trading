@@ -89,12 +89,14 @@ class BridgeTest(unittest.TestCase):
         self.create()
         response = self.client.post(self.url + '/cancel', headers=HEADERS).json()
         self.assertEqual(response['status'], 'cancel_requested')
+        self.assertNotIn('events', response)
         self.assertEqual(self.store.transition('1', self.run, 'running'), 'cancel_requested')
         self.store.transition('1', self.run, 'cancelled')
         self.assertEqual(self.store.transition('1', self.run, 'completed'), 'cancelled')
+        self.assertNotIn('events', self.client.post(self.url + '/cancel', headers=HEADERS).json())
 
     def test_cancel_before_admission_returns_durable_idempotent_receipt(self):
-        expected = {'id': self.run, 'status': 'cancelled'}
+        expected = {'id': self.run, 'status': 'cancelled', 'events': []}
         response = self.client.post(self.url + '/cancel', headers=HEADERS)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), expected)

@@ -160,7 +160,7 @@ class ResearchDispatchStateTest extends TestCase
     public function test_durable_pre_admission_cancel_receipt_unblocks_session_without_a_prompt_put(): void
     {
         ResearchRun::whereKey($this->run->id)->update(['status' => 'dispatching']);
-        Http::fake(['bridge.test/v1/researchers/*/runs/*/cancel' => Http::response(['id' => $this->run->id, 'status' => 'cancelled'])]);
+        Http::fake(['bridge.test/v1/researchers/*/runs/*/cancel' => Http::response(['id' => $this->run->id, 'status' => 'cancelled', 'events' => []])]);
         $this->service->cancel($this->run);
         $this->service->dispatch($this->run);
         $this->artisan('trading:reconcile')->assertSuccessful();
@@ -222,5 +222,61 @@ class ResearchDispatchStateTest extends TestCase
         $this->assertSame('cancel_requested', $this->run->fresh()->status);
         $this->assertNull($this->run->fresh()->completed_at);
         $this->assertSame(1, $puts);
+    }
+
+    public function test_cancel_completed_metadata_drains_final_events_before_sealing_assistant_text(): void
+    {
+        $this->run->update(['status' => 'running']);
+        $this->run->events()->create(['remote_id' => 1, 'type' => 'token', 'payload' => ['text' => 'Partial']]);
+        Http::fake(['bridge.test/*' => Http::sequence()->push(['status' => 'completed'])->push(['status' => 'completed', 'events' => [['id' => 2, 'type' => 'completed', 'payload' => ['text' => 'Canonical final']]]])]);
+        $this->service->cancel($this->run);
+        $this->assertSame('collecting', $this->run->fresh()->status);
+        $this->assertNull($this->run->fresh()->completed_at);
+        $this->assertDatabaseMissing('research_messages', ['research_run_id' => $this->run->id, 'role' => 'assistant']);
+        $this->service->sync($this->run);
+        $this->assertSame('completed', $this->run->fresh()->status);
+        $this->assertDatabaseHas('research_messages', ['research_run_id' => $this->run->id, 'role' => 'assistant', 'content' => 'Canonical final']);
+        Http::assertSent(fn ($request) => $request->method() === 'GET');
+    }
+
+    public function test_dispatch_replay_completed_metadata_drains_final_events_before_sealing_assistant_text(): void
+    {
+        $this->run->update(['status' => 'dispatching']);
+        $this->run->events()->create(['remote_id' => 1, 'type' => 'token', 'payload' => ['text' => 'Partial']]);
+        Http::fake(['bridge.test/*' => Http::sequence()->push(['status' => 'completed'])->push(['status' => 'completed', 'events' => [['id' => 2, 'type' => 'completed', 'payload' => ['text' => 'Canonical final']]]])]);
+        $this->service->dispatch($this->run);
+        $this->assertSame('collecting', $this->run->fresh()->status);
+        $this->assertNull($this->run->fresh()->completed_at);
+        $this->assertDatabaseMissing('research_messages', ['research_run_id' => $this->run->id, 'role' => 'assistant']);
+        $this->service->sync($this->run);
+        $this->assertSame('completed', $this->run->fresh()->status);
+        $this->assertDatabaseHas('research_messages', ['research_run_id' => $this->run->id, 'role' => 'assistant', 'content' => 'Canonical final']);
+        Http::assertSentCount(2);
+    }
+
+    public function test_terminal_metadata_requires_event_collection_or_explicit_full_output(): void
+    {
+        foreach (['completed', 'cancelled', 'failed', 'interrupted'] as $status) {
+            $this->run->update(['status' => 'running']);
+            $this->service->ingest($this->run, ['status' => $status]);
+            $this->assertSame('collecting', $this->run->fresh()->status);
+            $this->assertNull($this->run->fresh()->completed_at);
+        }
+        $this->service->ingest($this->run, ['status' => 'completed', 'output' => 'Explicit full result']);
+        $this->assertSame('completed', $this->run->fresh()->status);
+        $this->assertDatabaseHas('research_messages', ['research_run_id' => $this->run->id, 'role' => 'assistant', 'content' => 'Explicit full result']);
+        $this->service->ingest($this->run, ['status' => 'running']);
+        $this->assertSame('completed', $this->run->fresh()->status);
+    }
+
+    public function test_empty_final_event_page_finishes_after_prior_pages_without_early_sealing(): void
+    {
+        $this->run->update(['status' => 'cancel_requested']);
+        $this->service->ingest($this->run, ['status' => 'completed', 'has_more' => true, 'events' => [['id' => 1, 'type' => 'completed', 'payload' => ['text' => 'Drained canonical result']]]]);
+        $this->assertSame('collecting', $this->run->fresh()->status);
+        $this->assertDatabaseMissing('research_messages', ['research_run_id' => $this->run->id, 'role' => 'assistant']);
+        $this->service->ingest($this->run, ['status' => 'completed', 'events' => []]);
+        $this->assertSame('completed', $this->run->fresh()->status);
+        $this->assertDatabaseHas('research_messages', ['research_run_id' => $this->run->id, 'role' => 'assistant', 'content' => 'Drained canonical result']);
     }
 }

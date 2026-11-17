@@ -49,11 +49,40 @@ Receipts: `.orchestration/cache/clarification-php-integration.log`,
 explicitly. Its native-R1-specific method is unavailable when that separate
 operator checkout is absent; the local combined run exercised it successfully.
 
-Fresh private image/source CI and actual Linux qualification remain pending.
+Fresh private image/source CI for the corrected candidate remains pending.
 The manual Linux fixture now persists a real coordinator question/wait state
 before cancellation and requires its closure alongside UID checks and the death
 of a detached descendant. It still replaces the OMP worker with a synthetic
 fixture; it does not establish actual Go/R1/provider or production acceptance.
+
+## Shared final-event correction and Linux evidence
+
+Additional focused regressions reproduced premature completion through Stop and
+idempotent dispatch replay, not only the new answer endpoint. Shared ingestion
+now waits for an actual event collection or full output before settling a
+metadata-only terminal receipt. A terminal-derived collection state may drain
+events after cancellation intent; genuinely active late replies cannot undo it.
+The never-admitted cancellation receipt now truthfully contains `events: []`;
+no synthetic run/event rows are created, and GET run/events still returns 404.
+The matched PHP fixtures and direct bridge protocol tests preserve this exception.
+Root's final affected lifecycle/dispatch/clarification/artifact/proposal selection
+passed 61 tests/348 assertions. The corrected bridge API plus real loopback HTTP
+selection passed 25 tests in 0.712s. Scoped formatting and whitespace checks passed.
+Logs: `clarification-final-php.log` and `clarification-final-api-http.log` in the
+private orchestration cache.
+
+Superseded image run 44169124572 was cancelled during publication after source
+validation passed; it has no accepted image/runtime claim. The corrected candidate
+will receive fresh image/source qualification.
+
+Actual Linux manual run 44169130318 passed at bridge source
+`70057523193f0751ead7519903acb6060fd122aa`. Both dedicated identities passed
+all isolation checks, persisted `waiting_for_input`, closed their pending question
+on cancellation, killed the detached descendant and ended with an empty cgroup
+and confirmed cancelled executor. Cleanup verified. All protected source modules,
+schemas/channel helpers and qualification fixtures remain byte-identical after
+the separate PHP/private-HTTP correction. Receipts and component hashes are
+referenced in [the qualification contract](../../docs/api/linux-isolation.md).
 
 ## Live deployment admission
 

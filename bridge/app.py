@@ -144,7 +144,7 @@ def create_app(store=None, executor=None, token=None):
             raise HTTPException(404, 'run not found') from None
         if admitted and status == 'cancel_requested':
             executor.cancel(str(run_id))
-        return {'id': str(run_id), 'status': status}
+        return {'id': str(run_id), 'status': status, **({} if admitted else {'events': []})}
 
     @app.post('/v1/researchers/{researcher}/runs/{run_id}/clarifications/{request_id}/answer', dependencies=[Depends(authenticate)])
     def answer(researcher: int, run_id: UUID, request_id: UUID, body: Answers):

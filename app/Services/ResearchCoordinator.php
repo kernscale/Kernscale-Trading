@@ -83,9 +83,7 @@ class ResearchCoordinator
         foreach (['expires_at', 'answered_at', 'consumed_at'] as $field) {
             abort_if($clarification[$field] !== null && (! is_string($clarification[$field]) || ! preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/D', $clarification[$field])), 502, 'Invalid clarification receipt.');
         }
-        // Metadata-only terminal receipts must not seal partial text or skip final events.
-        $status = in_array($response['status'], ['completed', 'cancelled', 'failed', 'interrupted'], true) ? 'collecting' : $response['status'];
-        $this->ingest($run, ['status' => $status]);
+        $this->ingest($run, ['status' => $response['status']]);
 
         return ['id' => $run->id, 'status' => $run->fresh()->status, 'clarification' => $clarification];
     }
@@ -176,7 +174,9 @@ class ResearchCoordinator
             if ($status === 'queued' && $run->status !== 'queued') {
                 $status = 'waiting';
             }
-            if (($response['has_more'] ?? false) && in_array($status, ['completed', 'cancelled', 'failed', 'interrupted'], true)) {
+            $terminalResponse = in_array($status, ['completed', 'cancelled', 'failed', 'interrupted'], true);
+            // Status-only acknowledgements do not prove that final events have been drained.
+            if ($terminalResponse && (($response['has_more'] ?? false) || (! is_array($response['events'] ?? null) && ! is_string($response['output'] ?? null)))) {
                 $status = 'collecting';
             }
             if (! in_array($status, ['queued', 'dispatching', 'waiting', 'waiting_for_input', 'running', 'collecting', 'completed', 'cancel_requested', 'cancelled', 'failed', 'interrupted'], true)) {
@@ -186,7 +186,7 @@ class ResearchCoordinator
             if (in_array($run->status, ['completed', 'cancelled', 'failed'], true)) {
                 $status = $run->status;
             }
-            if ($run->status === 'cancel_requested' && in_array($status, ['queued', 'waiting', 'waiting_for_input', 'running', 'dispatching', 'collecting'], true)) {
+            if ($run->status === 'cancel_requested' && ! $terminalResponse && in_array($status, ['queued', 'waiting', 'waiting_for_input', 'running', 'dispatching', 'collecting'], true)) {
                 $status = 'cancel_requested';
             }
             $run->status = $status;

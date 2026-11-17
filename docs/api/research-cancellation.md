@@ -11,7 +11,7 @@ If no run has been admitted, the bridge commits a separate SQLite cancellation
 receipt scoped to that researcher and run UUID, then responds:
 
 ```json
-{"id": "the-run-uuid", "status": "cancelled"}
+{"id": "the-run-uuid", "status": "cancelled", "events": []}
 ```
 
 This means admission has been durably prevented. No worker was started, session
@@ -19,6 +19,9 @@ bound, request stored, process completion asserted, or synthetic run event
 created. Repeating the same POST returns the same receipt, including after
 coordinator restart. GET run and GET events remain 404 because no run exists;
 repeat POST is the idempotent receipt query.
+The empty collection is authoritative because no run/event stream exists. It
+allows Laravel to settle this cancellation without treating arbitrary status-only
+terminal responses as proof that all events were collected.
 
 A later PUT for the same researcher/run UUID returns 409 and never submits an
 executor job. The UUID is terminal regardless of the later payload. A new run
@@ -49,6 +52,10 @@ the executor cancellation signal. The response does not claim the worker has
 stopped. Existing executor confirmation/fencing must produce the final state.
 Existing terminal runs return their terminal status. Foreign researcher access
 continues to return 404 without changing the run or creating a receipt.
+Admitted responses remain status-only; Laravel collects their saved events before
+settling the local terminal state. This also preserves canonical final text when
+Stop races with completion or an idempotent dispatch replay returns a terminal
+status.
 
 Payload digest replay checks, session single-flight admission, restart
 reconciliation of admitted runs, and native session isolation retain their
