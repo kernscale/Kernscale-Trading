@@ -16,7 +16,7 @@ class ReadinessController extends Controller
             if (config('session.driver') === 'database' && ! Schema::connection(config('session.connection'))->hasTable(config('session.table', 'sessions'))) {
                 throw new \RuntimeException('Database sessions are unavailable.');
             }
-            foreach (['users', 'passkeys', 'invitations', 'research_sessions', 'research_runs', 'research_messages', 'research_events', 'research_outputs', 'board_cards', 'community_topics', 'watchlist_items', 'legacy_import_receipts'] as $table) {
+            foreach (['users', 'passkeys', 'invitations', 'research_sessions', 'research_runs', 'research_messages', 'research_events', 'research_outputs', 'research_attachments', 'board_cards', 'community_topics', 'watchlist_items', 'legacy_import_receipts'] as $table) {
                 if (! Schema::hasTable($table)) {
                     throw new \RuntimeException('Schema migration is incomplete.');
                 }

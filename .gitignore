@@ -45,6 +45,7 @@ yarn-error.log
 /opencode.jsonc
 
 /.orchestration/cache/
+/.orchestration/tools/
 /.playwright-cli/
 
 **/__pycache__/

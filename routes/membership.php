@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\MemberManagementController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['guest', 'throttle:6,1'])->group(function () {
@@ -10,4 +11,5 @@ Route::middleware(['guest', 'throttle:6,1'])->group(function () {
 Route::middleware(['auth', 'approved', 'verified', 'security.enrolled', 'password.confirm'])->group(function () {
     Route::post('/admin/invitations', [InvitationController::class, 'store'])->name('invitations.store');
     Route::delete('/admin/members/{user}', [InvitationController::class, 'revoke'])->name('members.revoke');
+    Route::patch('/admin/members/{user}', [MemberManagementController::class, 'update'])->name('members.update');
 });

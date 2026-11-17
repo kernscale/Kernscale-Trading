@@ -14,7 +14,34 @@ def send(value):
         print(json.dumps(value), flush=True)
 
 
+def attachment_call(name, call_id, arguments):
+    send({'type': 'tool_execution_start', 'toolCallId': call_id, 'toolName': name, 'args': arguments})
+    send({'type': 'host_tool_call', 'id': call_id, 'toolName': name, 'toolCallId': call_id, 'arguments': arguments})
+
+
+def finish_attachment_tool(command):
+    listing = command['id'] == 'attachment-list'
+    name = 'attachment_list' if listing else 'attachment_read'
+    send({'type': 'tool_execution_end', 'toolCallId': command['id'], 'toolName': name,
+          'result': command['result'], 'isError': command.get('isError', False)})
+    if command.get('isError'):
+        raise RuntimeError('offline attachment fixture received a tool error')
+    result = json.loads(command['result']['content'][0]['text'])
+    if listing:
+        if len(result) != 1 or 'text' in result[0]:
+            raise RuntimeError('offline attachment list must contain exactly one metadata receipt')
+        attachment_call('attachment_read', 'attachment-read', {'id': result[0]['id']})
+    else:
+        send({'type': 'message_end', 'messageId': 'attachment-message', 'message': {
+            'role': 'assistant', 'content': [{'type': 'text', 'text': json.dumps(result)}]}})
+        send({'type': 'prompt_result', 'id': prompt_id, 'agentInvoked': True,
+              'status': 'completed', 'sessionSettled': True})
+
+
 def finish_tool(command):
+    if os.environ.get('OMP_FAKE_ATTACHMENTS') == '1':
+        finish_attachment_tool(command)
+        return
     if os.environ.get('OMP_FAKE_SESSION_DIR') and os.environ.get('OMP_FAKE_NO_PERSIST') != '1':
         session_file = active_file or Path(os.environ['OMP_FAKE_SESSION_DIR']) / 'native-session.jsonl'
         session_file.write_text('{"type":"message","message":{"role":"assistant"}}\n')
@@ -84,6 +111,9 @@ for line in sys.stdin:
             sys.exit(0)
         if os.environ.get('OMP_FAKE_LATE_ERROR') == '1':
             send({'type': 'response', 'id': command['id'], 'command': 'prompt', 'success': False, 'error': 'offline scheduling failure'})
+            continue
+        if os.environ.get('OMP_FAKE_ATTACHMENTS') == '1':
+            attachment_call('attachment_list', 'attachment-list', {})
             continue
         proposal = os.environ.get('OMP_FAKE_WORKSPACE') == '1'
         send({'type': 'tool_execution_start', 'toolCallId': 'call-1', 'toolName': 'workspace_propose' if proposal else 'calc', 'args': {'expression': '1+2'}})

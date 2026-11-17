@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ResearchOutput;
 use App\Models\ResearchSession;
 use App\Models\WorkspaceProposal;
 use App\Services\ResearchCoordinator;
@@ -17,7 +18,7 @@ class WorkspaceController extends Controller
     {
         $research->authorize($request->user(), $session);
 
-        return response()->json([...$workspace->captureFor($session), 'proposals' => WorkspaceProposal::where('session_id', $session->id)->latest()->get()]);
+        return response()->json([...$workspace->captureFor($session), 'proposals' => WorkspaceProposal::where('session_id', $session->id)->latest()->get(), 'outputs' => ResearchOutput::where('research_session_id', $session->id)->where('user_id', $request->user()->id)->get(['id', 'research_run_id', 'title', 'kind', 'status', 'version'])]);
     }
 
     public function thesis(Request $request, ResearchSession $session, ResearchCoordinator $research): RedirectResponse

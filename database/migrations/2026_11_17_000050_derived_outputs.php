@@ -1,0 +1,27 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('research_outputs', function (Blueprint $table) {
+            $table->foreignUuid('source_output_id')->nullable()->constrained('research_outputs');
+            $table->unsignedInteger('source_output_version')->nullable();
+            $table->string('derivation_key', 100)->nullable();
+            $table->unique(['user_id', 'derivation_key']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('research_outputs', function (Blueprint $table) {
+            $table->dropForeign(['source_output_id']);
+            $table->dropUnique(['user_id', 'derivation_key']);
+            $table->dropColumn(['source_output_id', 'source_output_version', 'derivation_key']);
+        });
+    }
+};

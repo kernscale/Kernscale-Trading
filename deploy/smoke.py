@@ -145,6 +145,36 @@ class Smoke:
             time.sleep(1)
         raise RuntimeError('Expected readiness status was not observed: ' + str(status))
 
+    def pdf_attachment(self):
+        encoded = base64.b64encode((ROOT.parent / 'tests/Fixtures/research-evidence.pdf').read_bytes()).decode()
+        code = r'''
+require "vendor/autoload.php";
+$app = require "bootstrap/app.php";
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+if (ini_get('upload_max_filesize') !== '10M' || ini_get('post_max_size') !== '12M') exit(1);
+$bytes = base64_decode('%s', true);
+$path = tempnam(sys_get_temp_dir(), 'ci-evidence-');
+try {
+    file_put_contents($path, $bytes);
+    Spatie\Permission\Models\Role::findOrCreate('researcher', 'web');
+    $user = App\Models\User::forceCreate(['name' => 'CI evidence', 'email' => 'evidence-ci@kernscale.invalid',
+        'password' => bin2hex(random_bytes(32)), 'membership_status' => 'approved']);
+    $user->assignRole('researcher');
+    $session = App\Models\ResearchSession::create(['user_id' => $user->id, 'title' => 'CI evidence']);
+    $file = new Illuminate\Http\UploadedFile($path, 'evidence.pdf', 'application/pdf', null, true);
+    $service = app(App\Services\ResearchAttachments::class);
+    $saved = $service->upload($user, $session, $file);
+    $snapshot = $service->snapshot($user, $session, [$saved->id]);
+    if ($saved->sha256 !== hash('sha256', $bytes) || count($snapshot) !== 1
+        || !str_contains($snapshot[0]['text'], 'Attachment fixture evidence')
+        || Illuminate\Support\Facades\Storage::disk('local')->get($saved->storage_key) !== $bytes) exit(1);
+} finally {
+    unlink($path);
+}
+''' % encoded
+        self.compose('app', 'exec', '-T', 'app', 'php', '-r', code)
+        self.receipt['checks']['pdfAttachmentStorage'] = True
+
     def boot(self, artifact):
         self.started_projects.append('state')
         self.compose('state', 'up', '-d', '--wait', '--wait-timeout', '90')
@@ -175,6 +205,7 @@ class Smoke:
                 '$r->set("ci-smoke", "ok"); if($r->get("ci-smoke")!=="ok")exit(1); $r->del("ci-smoke");')
         self.compose('app', 'exec', '-T', 'app', 'php', '-r', code)
         self.receipt['checks']['laravelRedisRoundtrip'] = True
+        self.pdf_attachment()
         self.compose('app', 'up', '-d', '--wait', '--wait-timeout', '60', 'queue')
         self.compose('app', 'exec', '-T', 'queue', 'php', 'artisan', 'horizon:status')
         self.receipt['checks']['horizon'] = True

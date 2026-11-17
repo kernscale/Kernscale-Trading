@@ -15,7 +15,7 @@ class CommunityTopic extends Model
 
     protected function casts(): array
     {
-        return ['locked' => 'boolean'];
+        return ['locked' => 'boolean', 'output_version' => 'integer'];
     }
 
     /** @return BelongsTo<User, $this> */

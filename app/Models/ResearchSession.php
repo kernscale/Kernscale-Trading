@@ -14,7 +14,7 @@ class ResearchSession extends Model
 
     protected function casts(): array
     {
-        return ['pinned' => 'boolean'];
+        return ['pinned' => 'boolean', 'last_seen_event_id' => 'integer'];
     }
 
     /** @return HasMany<ResearchMessage, $this> */

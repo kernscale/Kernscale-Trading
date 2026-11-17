@@ -7,15 +7,26 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property array<string, mixed>|null $provenance
+ */
 class ResearchOutput extends Model
 {
     use HasUuids;
 
     protected $guarded = [];
 
+    protected $hidden = ['derivation_key'];
+
     protected function casts(): array
     {
-        return ['sources' => 'array', 'published_at' => 'datetime'];
+        return ['sources' => 'array', 'provenance' => 'array', 'source_output_version' => 'integer', 'published_at' => 'datetime'];
+    }
+
+    /** @return BelongsTo<ResearchRun, $this> */
+    public function run(): BelongsTo
+    {
+        return $this->belongsTo(ResearchRun::class, 'research_run_id');
     }
 
     /** @return BelongsTo<User, $this> */

@@ -16,6 +16,12 @@ class ReadinessTest extends TestCase
         $this->get('/ready')->assertStatus(503)->assertJsonPath('status', 'unavailable');
     }
 
+    public function test_attachment_storage_schema_is_required_even_when_migration_is_recorded(): void
+    {
+        Schema::drop('research_attachments');
+        $this->get('/ready')->assertStatus(503)->assertJsonPath('status', 'unavailable');
+    }
+
     public function test_migrated_local_app_reports_backend_configuration_honestly(): void
     {
         config(['session.driver' => 'database']);

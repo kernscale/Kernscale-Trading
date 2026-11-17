@@ -23,7 +23,7 @@ class ResearchRun extends Model
 
     protected function casts(): array
     {
-        return ['started_at' => 'datetime', 'completed_at' => 'datetime', 'workspace' => 'array'];
+        return ['started_at' => 'datetime', 'completed_at' => 'datetime', 'workspace' => 'array', 'attachments' => 'array'];
     }
 
     /** @return BelongsTo<ResearchSession, $this> */

@@ -11,6 +11,7 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
         $this->withoutVite();
+        config(['inertia.ssr.enabled' => false]);
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

@@ -19,17 +19,20 @@ class ResearchCoordinator
         abort_unless($session->user_id === $user->id, 404);
     }
 
-    public function start(User $user, ResearchSession $session, string $prompt, string $key): ResearchRun
+    /** @param list<string> $attachmentIds */
+    public function start(User $user, ResearchSession $session, string $prompt, string $key, array $attachmentIds = []): ResearchRun
     {
         $this->authorize($user, $session);
 
-        return DB::transaction(function () use ($user, $session, $prompt, $key) {
+        return DB::transaction(function () use ($user, $session, $prompt, $key, $attachmentIds) {
             ResearchSession::whereKey($session->id)->lockForUpdate()->firstOrFail();
             abort_if($session->runs()->whereIn('status', ['queued', 'dispatching', 'waiting', 'running', 'collecting', 'cancel_requested'])->exists() && ! ResearchRun::where('user_id', $user->id)->where('idempotency_key', $key)->exists(), 409, 'A research turn is already active.');
+            $attachments = app(ResearchAttachments::class)->snapshot($user, $session, $attachmentIds);
             $run = ResearchRun::firstOrCreate(['user_id' => $user->id, 'idempotency_key' => $key], [
-                'research_session_id' => $session->id, 'prompt' => $prompt, 'status' => 'queued', 'workspace' => app(WorkspaceProposals::class)->captureFor($session),
+                'research_session_id' => $session->id, 'prompt' => $prompt, 'status' => 'queued', 'attachments' => $attachments, 'workspace' => app(WorkspaceProposals::class)->captureFor($session),
             ]);
             abort_unless($run->research_session_id === $session->id && hash_equals(hash('sha256', $run->prompt), hash('sha256', $prompt)), 409, 'Request key already used for different work.');
+            abort_unless(($run->attachments ?? []) === $attachments, 409, 'Request key already used for different attachments.');
             if ($run->wasRecentlyCreated) {
                 ResearchMessage::create(['research_session_id' => $session->id, 'research_run_id' => $run->id, 'role' => 'user', 'content' => $prompt]);
                 $session->touch();
@@ -81,6 +84,7 @@ class ResearchCoordinator
         }
         $response = $this->bridge()->put($this->path($run), [
             'workspace_id' => 'kernscale-trading', 'tenant_id' => 'kernscale-trading',
+            'attachments' => $run->attachments ?? [],
             'session_id' => $run->research_session_id, 'prompt' => $run->prompt, 'model' => config('trading.model'), 'workspace' => $run->workspace ?? app(WorkspaceProposals::class)->captureFor($run->session),
         ])->throw()->json();
         $this->ingest($run, $response);

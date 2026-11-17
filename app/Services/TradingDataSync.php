@@ -15,20 +15,24 @@ class TradingDataSync
     public function sync(): array
     {
         $errors = [];
+        $native = app(NativeTradingSource::class);
+        $useNative = ! config('trading.bridge_url') && $native->configured();
         foreach (['portfolio' => '/v1/portfolio', 'agents' => '/v1/status'] as $kind => $path) {
             try {
-                $payload = app(ResearchCoordinator::class)->bridge()->get($path)->throw()->json();
+                $payload = $useNative && $kind === 'agents'
+                    ? $native->status()
+                    : app(ResearchCoordinator::class)->bridge()->get($path)->throw()->json();
                 $this->snapshot($kind, $payload);
             } catch (\Throwable $error) {
                 $errors[] = $kind.' unavailable; saved observation retained.';
             }
         }
         try {
-            $response = app(ResearchCoordinator::class)->bridge()->get('/v1/reports')->throw()->json();
-            $this->snapshot('native_reports', ['observed_at' => now()->toIso8601String(), 'source' => 'scheduled-native-research', 'reports' => $response['reports'] ?? []]);
+            $reports = $useNative ? $native->reports() : (app(ResearchCoordinator::class)->bridge()->get('/v1/reports')->throw()->json()['reports'] ?? []);
+            $this->snapshot('native_reports', ['observed_at' => now()->toIso8601String(), 'source' => 'scheduled-native-research', 'reports' => $reports]);
             $owner = User::role('owner')->where('membership_status', 'approved')->first();
             if ($owner) {
-                foreach ($response['reports'] ?? [] as $report) {
+                foreach ($reports as $report) {
                     if (! is_string($report['id'] ?? null) || ! preg_match('/^[a-f0-9-]{36}$/i', $report['id'])) {
                         continue;
                     }
@@ -36,11 +40,26 @@ class TradingDataSync
                         continue;
                     }
                     if (! empty($report['has_report'])) {
-                        $artifact = app(ResearchCoordinator::class)->bridge()->get('/v1/reports/'.$report['id'])->throw()->json();
-                        if (($artifact['id'] ?? null) !== $report['id'] || ! is_string($artifact['content'] ?? null) || ! hash_equals($report['report_sha256'] ?? '', hash('sha256', $artifact['content']))) {
+                        $artifact = $useNative ? $native->reportArtifact($report['id']) : app(ResearchCoordinator::class)->bridge()->get('/v1/reports/'.$report['id'])->throw()->json();
+                        if (($artifact['id'] ?? null) !== $report['id'] || ! is_string($artifact['content'] ?? null)) {
                             throw new \RuntimeException('Report checksum mismatch.');
                         }
-                        $this->importReport([...$report, 'content' => $artifact['content']], $owner->id);
+                        $digest = hash('sha256', $artifact['content']);
+                        $listed = $report['report_sha256'] ?? null;
+                        $reported = $artifact['sha256'] ?? null;
+                        if ((! $useNative && ! is_string($listed)) || ($useNative && ! is_string($reported))) {
+                            throw new \RuntimeException('Report checksum is unavailable.');
+                        }
+                        foreach ([$listed, $reported] as $checksum) {
+                            if ($checksum !== null && (! is_string($checksum) || ! hash_equals($checksum, $digest))) {
+                                throw new \RuntimeException('Report checksum mismatch.');
+                            }
+                        }
+                        $this->importReport([...$report, 'content' => $artifact['content'], 'provenance' => [
+                            'source' => $report['source'] ?? 'scheduled-native-research', 'external_id' => $report['id'],
+                            'report_sha256' => $digest, 'receipt_sha256' => $report['receipt_sha256'] ?? null,
+                            'metadata_response_sha256' => $report['metadata_response_sha256'] ?? null,
+                        ]], $owner->id);
                     }
                 }
             }
@@ -85,6 +104,7 @@ class TradingDataSync
         ResearchOutput::firstOrCreate(['external_id' => $report['id']], [
             'user_id' => $ownerId, 'title' => $report['title'], 'kind' => 'research', 'status' => 'in_review',
             'content' => $report['content'], 'sources' => $report['sources'] ?? [], 'original_checksum' => $checksum,
+            'provenance' => $report['provenance'] ?? null,
             'created_at' => CarbonImmutable::parse($report['created_at']),
         ]);
     }

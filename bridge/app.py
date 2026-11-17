@@ -7,8 +7,9 @@ from contextlib import asynccontextmanager
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from bridge.attachment_tools import Attachment, validate_attachments
 from bridge.store import Conflict, Store
 from bridge.workspace_tools import Workspace
 
@@ -23,6 +24,12 @@ class RunRequest(BaseModel):
     prompt: str = Field(min_length=1)
     model: str = 'deepseek-v4.1-flash'
     workspace: Workspace = Field(default_factory=Workspace)
+    attachments: list[Attachment] = Field(default_factory=list)
+
+    @model_validator(mode='after')
+    def admitted_attachments(self):
+        validate_attachments(self.attachments)
+        return self
 
 
 def create_app(store=None, executor=None, token=None):
@@ -103,6 +110,9 @@ def create_app(store=None, executor=None, token=None):
         if body.model != 'deepseek-v4.1-flash':
             raise HTTPException(422, 'model is not admitted')
         data = body.model_dump(mode='json')
+        # Existing no-attachment run digests predate this optional field.
+        if not data['attachments']:
+            data.pop('attachments')
         try:
             row, created = store.create(str(researcher), str(run_id), data)
         except KeyError:

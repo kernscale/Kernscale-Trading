@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\BoardCard;
+use App\Models\ResearchOutput;
 use App\Models\ResearchRun;
 use App\Models\ResearchSession;
 use App\Services\ResearchCoordinator;
+use App\Services\SessionActivity;
 use App\Services\WorkspaceProposals;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
@@ -30,8 +32,11 @@ class ResearchController extends Controller
             $active = $sessions->first()->load(['messages', 'runs', 'board', 'proposals']);
         }
         $events = $active ? $active->runs->flatMap(fn ($run) => $run->events()->get())->sortBy('id')->values() : [];
+        if ($active) {
+            $active->setRelation('outputs', ResearchOutput::where('research_session_id', $active->id)->where('user_id', $request->user()->id)->get(['id', 'research_run_id', 'title', 'kind', 'status', 'version']));
+        }
 
-        return Inertia::render('hub/research', ['sessions' => $sessions, 'activeSession' => $active, 'events' => $events]);
+        return Inertia::render('hub/research', ['sessions' => app(SessionActivity::class)->rows($sessions), 'activeSession' => $active, 'events' => $events]);
     }
 
     public function create(Request $request): RedirectResponse
@@ -54,8 +59,8 @@ class ResearchController extends Controller
 
     public function run(Request $request, ResearchSession $session, ResearchCoordinator $service): RedirectResponse
     {
-        $data = $request->validate(['prompt' => 'required|string', 'idempotency_key' => 'required|string|max:100']);
-        $service->start($request->user(), $session, $data['prompt'], $data['idempotency_key']);
+        $data = $request->validate(['prompt' => 'required|string', 'idempotency_key' => 'required|string|max:100', 'attachment_ids' => 'sometimes|array', 'attachment_ids.*' => 'required|uuid|distinct']);
+        $service->start($request->user(), $session, $data['prompt'], $data['idempotency_key'], $data['attachment_ids'] ?? []);
 
         return back();
     }

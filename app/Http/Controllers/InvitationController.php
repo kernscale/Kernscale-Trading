@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
-use Spatie\Permission\Models\Role;
 
 class InvitationController extends Controller
 {
@@ -53,14 +52,6 @@ class InvitationController extends Controller
 
     public function revoke(Request $request, User $user): RedirectResponse
     {
-        abort_unless($request->user()->hasRole('owner'), 403);
-        abort_if($user->id === $request->user()->id, 403, 'You cannot revoke your own membership.');
-        DB::transaction(function () use ($user) {
-            Role::where('name', 'owner')->where('guard_name', 'web')->lockForUpdate()->firstOrFail();
-            abort_if($user->hasRole('owner') && User::role('owner')->where('membership_status', 'approved')->count() <= 1, 403, 'Keep an approved owner.');
-            $user->forceFill(['membership_status' => 'revoked', 'remember_token' => null])->save();
-        });
-
-        return back()->with('status', 'Membership revoked.');
+        return app(MemberManagementController::class)->revoke($request, $user);
     }
 }
