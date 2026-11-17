@@ -19,7 +19,7 @@ Every request needs `Authorization: Bearer <service token>` and `X-Workspace-ID:
 | PUT | `/v1/researchers/{positive-id}/runs/{uuid}` | Submit immutable run; identical replay returns existing state; changed payload 409 |
 | GET | same path | `{id,status,session_id}` |
 | GET | same path + `/events?after=0` | `{id,status,events:[{id,type,payload,created_at}]}`; at most 500 events, monotonically increasing durable cursor |
-| POST | same path + `/cancel` | `cancel_requested` until worker/cgroup exit is observed |
+| POST | same path + `/cancel` | Durable `cancelled` receipt before admission; admitted work stays `cancel_requested` until worker/cgroup confirmation |
 | GET | `/health` | Authenticated capability state; no credential values |
 | GET | `/v1/portfolio` | Read-only native portfolio projection |
 | GET | `/v1/reports` | Native saved report summaries |
@@ -29,6 +29,11 @@ Every request needs `Authorization: Bearer <service token>` and `X-Workspace-ID:
 Submission JSON: `{workspace_id:"kernscale-trading",tenant_id:"kernscale-trading",session_id:"<uuid>",prompt:"...",model:"deepseek-v4.1-flash"}`. Unknown fields/models are refused. Sessions belong to exactly one researcher; another researcher receives 404. One run per session can be active. There are no application run-count or spending quotas. Browser polling/reconnection never owns the worker task. Terminal states are `completed`, `failed`, `cancelled`, and `interrupted`.
 
 ## Actual isolation boundary
+
+The manual [Linux CI qualification](../docs/api/linux-isolation.md) verified actual
+UID/GID dropping, cross-home denial and cgroup cancellation of detached
+descendants using synthetic workers. Agents2 admission, production systemd
+confinement and actual OMP/R1/provider execution remain separate requirements.
 
 `deploy/` is an **uninstalled host admission template**, not an executed release. Real dispatch fails closed without Linux, a dedicated root-protected cgroup v2 subtree, root-supervised UID dropping, a root-owned non-writable researcher identity map, unique unprivileged UIDs/GIDs, private UID-owned homes, and explicit `runtime_qualified:true`. Each researcher has a distinct OS identity. Workers and OMP descendants join one app-owned cgroup per run; cancellation/restart fence that cgroup. No arbitrary executable, RPC operation, shell command, provider URL, UID or environment value is accepted from HTTP.
 

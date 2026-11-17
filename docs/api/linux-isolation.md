@@ -80,3 +80,21 @@ python3 -m unittest bridge.tests.test_linux_qualification -v
 
 These local checks exercise guards only and do not establish any Linux syscall
 or target-host acceptance. The manual CI receipt supplies that separate evidence.
+
+## Observed CI qualification
+
+Source `4c09102d9bb39b9d0fca84007679f72633b246ed` passed
+[manual run44091684938](https://github.com/kernscale/Kernscale-Trading/actions/runs/44091684938).
+Both identities passed every listed UID/GID, credential/environment, permission
+and detached-descendant cancellation check; cgroups emptied, executor status was
+`cancelled` and cleanup verified. The downloaded receipt records `qualified:true`
+and retains all five runtime/production exclusions as false. Same-source
+[source run44091684569](https://github.com/kernscale/Kernscale-Trading/actions/runs/44091684569)
+passed116 selected PostgreSQL tests/549 assertions and52 SDK/API checks.
+
+Earlier runs44090900040 and44091343223 refused before resource creation because
+the runner's `/opt` was root-owned0777. Read-only mode evidence showed `/var/lib`
+root-owned0755; the disposable root moved there with every ownership guard
+preserved. No existing runner directory permissions were changed. Receipts are
+under `.orchestration/cache/linux-isolation-<run-id>/`; successful logs are
+`linux-isolation-44091684938.log` and `backend-source-44091684569.log`.
