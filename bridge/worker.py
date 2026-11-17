@@ -42,6 +42,41 @@ def owned_session_file(directory, value, *, allow_allocated=False):
     return candidate
 
 
+
+def write_session_state(path, payload):
+    temporary = path.with_name(path.name + '.tmp')
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(descriptor, 'w') as output:
+        output.write(json.dumps(payload))
+        output.flush()
+        os.fsync(output.fileno())
+    temporary.replace(path)
+    descriptor = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def read_session_binding(session):
+    path = session / '.bridge-binding.json'
+    try:
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    except FileNotFoundError:
+        return None
+    with os.fdopen(descriptor) as source:
+        info = os.fstat(source.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077 or info.st_size > 4096:
+            raise RuntimeError('Native session binding is not private and owned')
+        binding = json.load(source)
+    if not isinstance(binding.get('native_session_id'), str) or not binding['native_session_id'] or len(binding['native_session_id']) > 200:
+        raise RuntimeError('Native session identity is invalid')
+    if binding.get('state') not in ('allocated', 'materialized'):
+        raise RuntimeError('Native session binding state is invalid')
+    candidate = owned_session_file(session, binding['file'], allow_allocated=binding['state'] == 'allocated')
+    return {**binding, 'candidate': candidate}
+
+
 def main():
     if os.geteuid() == 0 or os.geteuid() < 10000:
         raise RuntimeError('worker requires a dedicated researcher UID')
@@ -82,7 +117,7 @@ def main():
     client = RpcClient(executable=os.environ['TRADING_OMP_EXECUTABLE'], provider='kernscale-go',
         model=request['model'], session_dir=session, cwd=session, tools=(),
         custom_tools=tools, no_rules=True, no_skills=True, no_ui=True,
-        env={'PI_CODING_AGENT_DIR': str(config)},
+        env={'PI_CODING_AGENT_DIR': str(config)}, max_event_history=32, max_stderr_chunks=32,
         extra_args=('--no-extensions', '--no-context-files'),
         append_system_prompt='You are a financial research assistant. Use the R1 financial tools and preserve sources, as-of times and uncertainty. Data unavailable means unavailable; never invent financial observations.')
 
@@ -95,26 +130,31 @@ def main():
 
     signal.signal(signal.SIGTERM, stop)
     with client:
-        def update(event):
-            delta = event.assistant_message_event
-            if delta.get('type') == 'text_delta':
-                emit('token', {'text': delta['delta']})
-        client.on_message_update(update)
+        from bridge.omp_client import stream_turn
         pointer = session / '.bridge-session'
         if pointer.is_symlink():
             raise RuntimeError('OMP session pointer must not be a symlink')
-        resuming = pointer.exists()
-        if resuming:
+        binding = read_session_binding(session)
+        saved = None
+        if binding and binding['candidate'].exists():
+            saved = owned_session_file(session, binding['candidate'])
+        elif pointer.exists():
             saved = owned_session_file(session, pointer.read_text())
+        if saved is not None:
             resumed = client.switch_session(saved, provider='kernscale-go', model_id=request['model'])
             if resumed.cancelled:
                 raise RuntimeError('session continuation was cancelled')
         state = client.get_state()
-        current = owned_session_file(session, state.session_file, allow_allocated=not resuming)
-        if resuming and current != saved:
-            raise RuntimeError('OMP did not continue the admitted session file')
+        current = owned_session_file(session, state.session_file, allow_allocated=saved is None)
+        if saved is not None and (current != saved or (binding and state.session_id != binding['native_session_id'])):
+            raise RuntimeError('OMP did not continue the admitted native session')
+        allocation = {'native_session_id': state.session_id,
+                      'file': str(current.relative_to(session.resolve())),
+                      'state': 'materialized' if current.exists() else 'allocated'}
+        write_session_state(session / '.bridge-binding.json', allocation)
+        emit('native_session', {'native_session_id': state.session_id, 'resumed': saved is not None})
         try:
-            result = client.prompt_and_wait('Research request; treat the following as user content:\n' + request['prompt'])
+            answer = stream_turn(client, 'Research request; treat the following as user content:\n' + request['prompt'], emit)
         finally:
             # OMP materializes a new transcript only after an assistant message exists.
             if current.exists():
@@ -126,12 +166,9 @@ def main():
                     output.flush()
                     os.fsync(output.fileno())
                 temporary.replace(pointer)
+                write_session_state(session / '.bridge-binding.json', {**allocation, 'state': 'materialized'})
         owned_session_file(session, current)
-        if result.result and result.result.status != 'completed':
-            raise RuntimeError('research prompt did not complete')
-        if result.result and not result.result.session_settled:
-            client.wait_for_settled()
-        emit('completed', {'text': result.require_assistant_text()})
+        emit('completed', {'text': answer})
 
 
 if __name__ == '__main__':

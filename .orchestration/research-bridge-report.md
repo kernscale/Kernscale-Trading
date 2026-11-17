@@ -106,3 +106,40 @@ Focused evidence:
 - `python3 -m py_compile bridge/worker.py bridge/tests/fake_omp.py bridge/tests/test_native_adapter.py bridge/tests/test_session_paths.py`: exit 0. Scoped `git diff --check`: exit 0.
 
 No unrelated bridge behavior changed. Actual provider/tool-turn compatibility, existing populated real-CLI continuation, Linux UID/cgroup isolation and deployment remain release gates.
+
+## Backend protocol corrections — 2026-11-17
+
+Checked base revision `d9aee5ec7e1486f19074896228d1f23a48d3e58d`. Changed only owned backend Python worker/tool adapter, new `bridge/omp_client.py`, related bridge fixtures/tests, and this receipt. Unrelated concurrent frontend, PHP, deployment and CI edits were preserved; no commit, provider call or remote action was performed by this lane.
+
+### Duration and bounded streaming
+
+Replaced `prompt_and_wait` full-turn collection with exact pinned SDK public `prompt`, correlated `on_prompt_result`, visible `on_message_end` and lifecycle callbacks. No overall research deadline is imposed. SDK history is explicitly bounded to 32 events/32 stderr chunks in workers; callbacks persist streamed events through the existing coordinator rather than reconstructing a turn-sized SDK event list. One canonical visible assistant answer is retained. Bounded `get_state` and nonblocking `wait_for_idle(timeout=0)` checks detect dead transports/late admission errors; SDK technical command timeouts remain intact. Hidden thinking is not forwarded.
+
+- Real SDK regression reproduces the original default 60-second deadline using an accelerated SDK clock, then verifies the new stream succeeds through the same offline subprocess. Another regression reproduces collector eviction with an eight-event ring and verifies 1,024 streamed deltas arrive without whole-turn retention.
+- **Actual wall-clock check: 62.042 seconds**, actual pinned SDK plus responsive offline subprocess; canonical answer verified with an eight-event ring, exit 0, no model/provider request. Exact sanitized receipt: `.orchestration/cache/bridge-stream-wall-clock.json`. This was a separate one-off check; it is not hidden inside normal CI test duration.
+- Dead-child and late prompt-admission-failure regressions verify the new callback wait terminates with a technical failure instead of waiting indefinitely.
+
+### Cancellation-safe native binding
+
+Before submitting any prompt, the worker atomically writes and fsyncs a mode-0600 `.bridge-binding.json` plus its parent directory, containing only the native session ID, confined relative JSONL candidate and explicit `allocated`/`materialized` state. It emits an opaque native-session event without host paths. A later worker resumes an allocated binding **only if** that file has materialized and passes strict owned regular-file/no-symlink checks. A genuinely absent allocated path permits fresh allocation; a missing materialized file fails closed. Existing legacy pointer compatibility remains. Thus SIGKILL can bypass the final pointer update without orphaning a transcript that already exists.
+
+The actual-SDK worker fixture simulates the first-turn kill artifact: materialized JSONL, allocation-only binding, no legacy pointer, and a different default filename on the next CLI launch. It resumes the original file and preserves the native ID. Direct binding tests cover private mode, missing files, escapes and untrusted permissions. No real OS isolation or provider behavior is inferred from these fixtures.
+
+### Native tool lifecycle
+
+Actual SDK tool start/update/end events map to `tool_call`, `tool_progress` and `tool_result`, all with stable `call_id` and native result/error flag. The R1 adapter now returns provenance/evidence metadata in the host result's `details`; its old duplicate terminal event was removed. Tool result payloads now contain native `result.content` / `result.details` alongside `name`, `call_id` and `ok`. Existing source/evidence events remain. Tests assert exactly one start and one terminal result per call, shared correlation ID, and preserved evidence metadata.
+
+### Exact receipts
+
+- Baseline `d9aee5e` worker and R1 adapter were executed from immutable `git show` source against the actual SDK/offline subprocess: missing tool-start events, missing result call IDs and missing early native binding reproduced. Sanitized receipt `.orchestration/cache/bridge-stream-baseline-reproduction.json` (exit 0 records successful reproduction).
+- `PYTHONPATH=.orchestration/cache/omp-sdk/src:/Users/jonasknppel/Businesses/Kernscale/repositories/products/Trading-R1:. .orchestration/cache/bridge-venv/bin/python -m unittest bridge.tests.test_omp_stream bridge.tests.test_native_adapter bridge.tests.test_session_paths -v`: **13 tests passed**, exit 0. Exact final log `.orchestration/cache/bridge-stream-native-tests.log` (3.575 seconds). Late-admission regression is green.
+- `python3 -m py_compile bridge/worker.py bridge/r1_tools.py bridge/omp_client.py bridge/tests/test_omp_stream.py bridge/tests/test_native_adapter.py bridge/tests/test_session_paths.py bridge/tests/fake_omp.py`: exit 0.
+- Scoped `git diff --check -- bridge/worker.py bridge/r1_tools.py bridge/omp_client.py bridge/tests`: exit 0.
+
+This patch is frozen for root review/CI. Actual isolated Linux OMP/R1 model/tool-turn qualification and production acceptance remain separate gates; earlier HTTP acknowledgment alone does not establish them. No new dependencies, application quotas, ledger changes or scheduled-agent changes were introduced.
+
+### Final one-event result compatibility correction
+
+Retained native `result.content`/`result.details`, `call_id` and `ok` while restoring existing flat R1 `text`, `provenance` and `evidence_id` fields on the **same single** `tool_result` event. R1 host details explicitly identify the safe display metadata; normalization copies only those known fields. Generic tool content contributes visible text, without fabricated R1 provenance/evidence or stringify-all debug data. This preserves current consumers without duplicate terminal events.
+
+Actual native-adapter assertions verify matching flat/nested display text, provenance and evidence ID, stable call correlation and exactly one terminal event. Generic-tool regression verifies text remains available and no R1 provenance/evidence is invented. The same exact pinned-SDK narrow command passed **13 tests**, exit 0 (3.666 seconds), final `.orchestration/cache/bridge-stream-native-tests.log`. Changed-file syntax and whitespace checks passed. Duration/binding logic was unchanged; the **62.042-second** receipt was intentionally not rerun. Patch frozen again for root commit/CI; no frontend or provider/host action occurred.

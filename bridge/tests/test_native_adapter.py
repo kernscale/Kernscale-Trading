@@ -33,7 +33,8 @@ class NativeAdapterTest(unittest.TestCase):
             admitted.update(kwargs)
             config_dir = kwargs.get('env', {}).get('PI_CODING_AGENT_DIR', str(Path.home() / '.omp/agent'))
             configurations.append(json.loads((Path(config_dir) / 'models.json').read_text()))
-            return RpcClient(command=[sys.executable, str(fixture)], custom_tools=kwargs['custom_tools'], env={'OMP_FAKE_SESSION_DIR': str(kwargs['session_dir'])})
+            allocated = 'native-session.jsonl' if len(configurations) == 1 else 'unexpected-new-session.jsonl'
+            return RpcClient(command=[sys.executable, str(fixture)], custom_tools=kwargs['custom_tools'], max_event_history=kwargs.get('max_event_history', 32), env={'OMP_FAKE_SESSION_DIR': str(kwargs['session_dir']), 'OMP_FAKE_ALLOCATED_FILE': allocated})
 
         request = {'session_id': '00000000-0000-0000-0000-000000000001',
                    'prompt': '/arbitrary-command', 'model': 'deepseek-v4.1-flash'}
@@ -45,6 +46,12 @@ class NativeAdapterTest(unittest.TestCase):
             output = io.StringIO()
             with patch.dict(os.environ, environment), patch('bridge.worker.os.geteuid', return_value=21001), patch('bridge.worker.signal.signal'), patch('omp_rpc.RpcClient', side_effect=client), patch('bridge.r1_tools.build_tools', side_effect=tools), patch('sys.stdin', io.StringIO(json.dumps(request))), redirect_stdout(output):
                 worker.main()
+                # State left by SIGKILL after first transcript materialization, before final pointer update.
+                session_root = Path(directory) / 'sessions' / request['session_id']
+                (session_root / '.bridge-session').unlink()
+                binding_path = session_root / '.bridge-binding.json'
+                binding = json.loads(binding_path.read_text())
+                binding_path.write_text(json.dumps({**binding, 'state': 'allocated'}))
                 with patch('sys.stdin', io.StringIO(json.dumps(request))):
                     worker.main()
                 other_request = {**request, 'session_id': '00000000-0000-0000-0000-000000000002'}
@@ -60,6 +67,19 @@ class NativeAdapterTest(unittest.TestCase):
             self.assertFalse((Path(directory) / '.omp/agent/models.json').exists())
             events = [json.loads(line) for line in output.getvalue().splitlines()]
             self.assertEqual(events[-1]['type'], 'completed')
+            first_turn = events[:next(index for index, event in enumerate(events) if event['type'] == 'completed')]
+            calls = [event['payload'] for event in first_turn if event['type'] == 'tool_call']
+            results = [event['payload'] for event in first_turn if event['type'] == 'tool_result']
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(len(results), 1)
+            self.assertEqual(calls[0]['call_id'], results[0]['call_id'])
+            self.assertEqual(results[0]['result']['details']['evidence_id'], 'e1')
+            self.assertEqual(results[0]['evidence_id'], 'e1')
+            self.assertEqual(results[0]['text'], results[0]['result']['details']['text'])
+            self.assertEqual(results[0]['provenance'], results[0]['result']['details']['provenance'])
+            self.assertEqual(results[0]['call_id'], 'call-1')
+            native = [event['payload'] for event in events if event['type'] == 'native_session']
+            self.assertEqual([event['resumed'] for event in native], [False, True, False])
             self.assertEqual(admitted['tools'], ())
             self.assertIn('--no-extensions', admitted['extra_args'])
             self.assertTrue(admitted['no_rules'])
@@ -170,10 +190,10 @@ class NativeAdapterTest(unittest.TestCase):
             resumed = build_tools(reader, emit, host_tool, directory)
             calc = next(tool for tool in resumed if tool.name == 'calc')
             answer = calc.execute({'expression': 'prev:e1.result+4'}, SimpleNamespace(tool_call_id='call-2'))
-            self.assertIn('7', answer)
+            self.assertIn('7', answer['content'][0]['text'])
             with self.assertRaises(RuntimeError):
                 calc.execute({'expression': '__import__("os")'}, SimpleNamespace(tool_call_id='call-3'))
-            self.assertTrue(any(kind == 'tool_result' and payload.get('ok') is False for kind, payload in events))
+            self.assertFalse(any(kind == 'tool_result' for kind, payload in events))
 
 
 if __name__ == '__main__':

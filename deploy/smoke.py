@@ -96,7 +96,7 @@ class Smoke:
             'DB_CONNECTION=pgsql', 'DB_HOST=postgres', 'DB_DATABASE=trading', 'DB_USERNAME=trading',
             'DB_PASSWORD=' + password, 'QUEUE_CONNECTION=redis', 'REDIS_CLIENT=phpredis',
             'REDIS_HOST=redis', 'REDIS_PASSWORD=' + redis_password, 'CACHE_STORE=database',
-            'SESSION_DRIVER=database', 'MAIL_MAILER=smtp', 'MAIL_HOST=mail.invalid', 'MAIL_PORT=2525',
+            'SESSION_DRIVER=database', 'MAIL_MAILER=smtp', 'MAIL_HOST=mail-fixture', 'MAIL_PORT=2525',
             'MAIL_FROM_ADDRESS=ci@kernscale.invalid', 'LOG_CHANNEL=stderr', 'TRADING_BRIDGE_URL=',
             'TRADING_BRIDGE_TOKEN=']) + '\n'
         for name, content in [('runtime.env', runtime), ('postgres.env',

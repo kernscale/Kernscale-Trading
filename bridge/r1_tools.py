@@ -57,11 +57,11 @@ def build_tools(reader, emit, host_tool, session_dir):
                                               call_id=context.tool_call_id, emit=emit))
                 if persistence_errors:
                     raise RuntimeError('Evidence persistence failed; research stopped')
-                emit('tool_result', {'name': name, 'ok': result.ok, 'text': result.text,
-                                    'provenance': result.meta, 'evidence_id': result.evidence_id})
                 if not result.ok:
                     raise RuntimeError(result.text)
-                return result.for_model()
+                return {'content': [{'type': 'text', 'text': result.for_model()}],
+                        'details': {'r1_result': True, 'text': result.for_model(),
+                                    'provenance': result.meta, 'evidence_id': result.evidence_id}}
         return execute
 
     tools = []

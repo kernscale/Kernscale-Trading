@@ -34,8 +34,10 @@ class OutputController extends Controller
 
     public function update(Request $request, ResearchOutput $output): RedirectResponse
     {
+        abort_unless($request->user()->hasAnyRole(['researcher', 'owner']), 403);
         abort_unless($output->user_id === $request->user()->id, 404);
         $data = $request->validate(['title' => 'required|string|max:200', 'content' => 'required|string', 'version' => 'required|integer|min:1']);
+        $data['version'] = (int) $data['version'];
         DB::transaction(function () use ($request, $output, $data) {
             $current = ResearchOutput::whereKey($output->id)->lockForUpdate()->firstOrFail();
             abort_unless(in_array($current->status, ['draft', 'changes_requested'], true) && $current->version === $data['version'] && $current->external_id === null, 409, 'Only the current editable draft can be revised.');
@@ -49,6 +51,7 @@ class OutputController extends Controller
 
     public function submit(Request $request, ResearchOutput $output): RedirectResponse
     {
+        abort_unless($request->user()->hasAnyRole(['researcher', 'owner']), 403);
         abort_unless($output->user_id === $request->user()->id, 404);
         $count = ResearchOutput::whereKey($output->id)->whereIn('status', ['draft', 'changes_requested'])->update(['status' => 'in_review', 'updated_at' => now()]);
         abort_unless($count === 1, 409);
@@ -60,10 +63,14 @@ class OutputController extends Controller
     public function review(Request $request, ResearchOutput $output): RedirectResponse
     {
         abort_unless($request->user()->hasRole('owner'), 403);
-        $data = $request->validate(['decision' => ['required', Rule::in(['publish', 'changes_requested'])], 'comment' => 'nullable|string']);
-        $count = ResearchOutput::whereKey($output->id)->where('status', 'in_review')->update(['status' => $data['decision'] === 'publish' ? 'published' : 'changes_requested', 'review_comment' => $data['comment'] ?? null, 'reviewed_by' => $request->user()->id, 'published_at' => $data['decision'] === 'publish' ? now() : null, 'updated_at' => now()]);
-        abort_unless($count === 1, 409);
-        $this->audit($request, 'output.'.$data['decision'], $output);
+        $data = $request->validate(['decision' => ['required', Rule::in(['publish', 'changes_requested'])], 'comment' => 'nullable|string', 'version' => 'required|integer|min:1']);
+        $data['version'] = (int) $data['version'];
+        DB::transaction(function () use ($request, $output, $data) {
+            $current = ResearchOutput::whereKey($output->id)->lockForUpdate()->firstOrFail();
+            abort_unless($current->status === 'in_review' && $current->version === $data['version'], 409, 'This output changed. Review the current revision before deciding.');
+            $current->update(['status' => $data['decision'] === 'publish' ? 'published' : 'changes_requested', 'review_comment' => $data['comment'] ?? null, 'reviewed_by' => $request->user()->id, 'published_at' => $data['decision'] === 'publish' ? now() : null]);
+            $this->audit($request, 'output.'.$data['decision'], $current);
+        });
 
         return back();
     }

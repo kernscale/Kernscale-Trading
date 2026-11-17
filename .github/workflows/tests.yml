@@ -86,3 +86,11 @@ jobs:
           python3 -B deploy/tests/test_smoke.py
       - name: Preserve complete selected Capitalio reference
         run: python3 -B tests/Design/test_capitalio_reference.py
+      - name: Check pinned research streaming and session protocol
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/omp-sdk-tests"
+          OMP_TEST_REQUIREMENT="$(python3 -c 'import tomllib; print(next(item for item in tomllib.load(open("bridge/pyproject.toml", "rb"))["project"]["dependencies"] if item.startswith("omp-rpc @ ")))')"
+          "$RUNNER_TEMP/omp-sdk-tests/bin/pip" install --quiet --no-input "$OMP_TEST_REQUIREMENT"
+          "$RUNNER_TEMP/omp-sdk-tests/bin/python" -B -m unittest bridge.tests.test_omp_stream bridge.tests.test_session_paths -v

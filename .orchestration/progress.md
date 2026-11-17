@@ -4,6 +4,8 @@ Goal: complete the approved unified Laravel Trading Hub. User authorized local a
 
 Current ownership (17 November): Claude owns frontend work. Codex owns backend functionality and runtime/deployment readiness. The frontend agent stopped before changing any files for the requested copy reduction; preserve Claude's work and do not edit or stage frontend files. The earlier requested Research label rename is committed in97dafee.
 
+Backend corrections (17 November): PostgreSQL validation for d9aee5e passed106tests/400assertions. Its disposable runtime proved pre-migration503 and completed native migrations, then correctly rejected the CI fixture's placeholder SMTP host; fixture corrected without weakening mail validation. Stateless readiness also detects a missing database-session table. Subsequent focused fixes bind reviews to their exact output version, enforce current researcher/owner edit/submit roles, normalize form versions, remove the SDK's accidental60-second research/whole-turn buffer limit, persist native bindings before prompts, and correlate tool events while keeping existing result fields. Publication6tests/38assertions and pinned-SDK13tests passed; a separate62.042-second offline SDK check passed. See docs/api/output-review.md for Claude's required review-version field. Combined Linux CI verification follows.
+
 Baseline: official Laravel React starter kit commit `012f4248f70e255e32ad93f540aca5fb7e8c96fe` (no production state copied). New source repository is `products/Kernscale-Trading`; writable linked implementation checkout is `internal/Kernscale-Trading`, branch `codex/trading-hub`.
 
 ## Boundaries and acceptance

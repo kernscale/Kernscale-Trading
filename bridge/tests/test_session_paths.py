@@ -22,6 +22,31 @@ class SessionPathTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 owned_session_file(root, allocated, allow_allocated=True)
 
+    def test_pending_binding_recovers_materialized_transcript_without_legacy_pointer(self):
+        from bridge.worker import read_session_binding, write_session_state
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            binding = root / '.bridge-binding.json'
+            payload = {'native_session_id': 'native-fixture', 'file': 'allocated.jsonl', 'state': 'allocated'}
+            write_session_state(binding, payload)
+            self.assertEqual(binding.stat().st_mode & 0o777, 0o600)
+            self.assertFalse((root / '.bridge-session').exists())
+            initial = read_session_binding(root)
+            self.assertFalse(initial['candidate'].exists())
+            (root / 'allocated.jsonl').write_text('materialized assistant fixture\n')
+            restored = read_session_binding(root)
+            self.assertEqual(owned_session_file(root, restored['candidate']), root / 'allocated.jsonl')
+            write_session_state(binding, {**payload, 'state': 'materialized'})
+            (root / 'allocated.jsonl').unlink()
+            with self.assertRaises(FileNotFoundError):
+                read_session_binding(root)
+            write_session_state(binding, {**payload, 'file': '../escape.jsonl'})
+            with self.assertRaises((ValueError, RuntimeError)):
+                read_session_binding(root)
+            binding.chmod(0o644)
+            with self.assertRaises(RuntimeError):
+                read_session_binding(root)
+
     def test_existing_resume_requires_regular_owned_jsonl_without_symlinks_or_escape(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
