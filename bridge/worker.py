@@ -112,7 +112,8 @@ def main():
         'api': 'openai-completions', 'models': [{'id': request['model'], 'name': 'DeepSeek',
         'reasoning': True, 'input': ['text']}]}}}))
     from bridge.workspace_tools import build_workspace_tools
-    tools = build_tools(reader, emit, host_tool, session)
+    session_identity = {}
+    tools = build_tools(reader, emit, host_tool, session, session_identity=session_identity)
     tools.extend(build_workspace_tools(request.get('workspace'), emit, host_tool))
     client = RpcClient(executable=os.environ['TRADING_OMP_EXECUTABLE'], provider='kernscale-go',
         model=request['model'], session_dir=session, cwd=session, tools=(),
@@ -148,13 +149,15 @@ def main():
         current = owned_session_file(session, state.session_file, allow_allocated=saved is None)
         if saved is not None and (current != saved or (binding and state.session_id != binding['native_session_id'])):
             raise RuntimeError('OMP did not continue the admitted native session')
+        session_identity['native_session_id'] = state.session_id
         allocation = {'native_session_id': state.session_id,
                       'file': str(current.relative_to(session.resolve())),
                       'state': 'materialized' if current.exists() else 'allocated'}
         write_session_state(session / '.bridge-binding.json', allocation)
         emit('native_session', {'native_session_id': state.session_id, 'resumed': saved is not None})
         try:
-            answer = stream_turn(client, 'Research request; treat the following as user content:\n' + request['prompt'], emit)
+            answer = stream_turn(client, 'Research request; treat the following as user content:\n' + request['prompt'], emit,
+                                 native_session_id=state.session_id, initial_state=state)
         finally:
             # OMP materializes a new transcript only after an assistant message exists.
             if current.exists():

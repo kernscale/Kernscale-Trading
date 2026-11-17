@@ -3,9 +3,11 @@ import hashlib
 import json
 import math
 import os
+import pwd
 import re
 import sqlite3
 import stat
+import subprocess
 from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
@@ -260,6 +262,105 @@ def _artifact(row, receipt_sha, config):
     raise ReportNotFound('Saved native report is unavailable')
 
 
+def _research_outcome(row, has_report):
+    status = row.get('status')
+    card = row.get('research_card') if isinstance(row.get('research_card'), dict) else {}
+    complete = card.get('status') == 'complete' and has_report
+    if status == 'failed':
+        return 'failed'
+    if row.get('error'):
+        return 'execution_failed' if status == 'researched' and complete else 'failed'
+    if status in ('started', 'interrupted'):
+        return 'in_progress' if status == 'started' else 'interrupted'
+    if card.get('status') == 'incomplete':
+        return 'incomplete'
+    if status == 'researched':
+        return 'execution_pending'
+    return 'complete' if status == 'complete' and complete else 'unverified'
+
+
+def _unit(value, suffix):
+    return isinstance(value, str) and bool(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.@:-]{0,120}\.' + suffix, value))
+
+
+def _observer(config):
+    native = config.get('TRADING_NATIVE_SERVICE_USER')
+    if native is not None and (not isinstance(native, str) or not re.fullmatch(r'[a-z_][a-z0-9_-]{0,31}', native)):
+        return None
+    uid = os.geteuid()
+    if uid == 0:
+        return ['--machine=' + native + '@.host'] if native and native != 'root' else None
+    try:
+        current = pwd.getpwuid(uid).pw_name
+    except (KeyError, OSError):
+        return None
+    return [] if native is None or native == current else None
+
+
+def _show(unit, transport):
+    properties = 'ActiveState,SubState,UnitFileState,Result,ExecMainStatus,Unit,NextElapseUSecRealtime'
+    keys = ('PATH',) if transport else ('PATH', 'HOME', 'XDG_RUNTIME_DIR', 'DBUS_SESSION_BUS_ADDRESS')
+    environment = {key: os.environ[key] for key in keys if key in os.environ}
+    environment.update(LC_ALL='C', LANG='C', TZ='UTC')
+    try:
+        result = subprocess.run(['systemctl', '--user', *transport, 'show', unit, '--property=' + properties, '--no-pager'],
+                                shell=False, capture_output=True, text=True, timeout=2, env=environment)
+        if result.returncode or len(result.stdout) > 8192:
+            return None
+        values = dict(line.split('=', 1) for line in result.stdout.splitlines() if '=' in line)
+        if values.get('ActiveState') not in ('active', 'inactive', 'activating', 'deactivating', 'failed', 'reloading', 'maintenance'):
+            return None
+        if not re.fullmatch(r'[a-z-]{1,40}', values.get('SubState', '')):
+            return None
+        if values.get('UnitFileState') not in ('enabled', 'enabled-runtime', 'disabled', 'static', 'indirect', 'masked', 'masked-runtime', 'linked', 'linked-runtime', 'alias', 'generated', 'transient'):
+            return None
+        return values
+    except (OSError, subprocess.SubprocessError, ValueError, TypeError):
+        return None
+
+
+def _next_run(value):
+    match = re.fullmatch(r'[A-Za-z]{3} ([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) UTC', value or '')
+    try:
+        return datetime.strptime(match[1], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc).isoformat() if match else None
+    except ValueError:
+        return None
+
+
+def _live_status(config, timer, schedule):
+    worker = {'state': 'unverified', 'source': None, 'unit': None, 'active_state': None,
+              'sub_state': None, 'unit_file_state': None, 'result': None, 'exec_main_status': None}
+    if not _unit(timer, 'timer'):
+        return None, worker
+    transport = _observer(config)
+    if transport is None:
+        return None, worker
+    observed = _show(timer, transport)
+    if observed is None:
+        return None, worker
+    service = observed.get('Unit')
+    if not _unit(service, 'service'):
+        return None, worker
+    schedule.update(state='observed', source='configured timer and systemctl --user show', timer_unit=timer,
+                    active_state=observed['ActiveState'], sub_state=observed['SubState'],
+                    unit_file_state=observed['UnitFileState'], next_run=_next_run(observed.get('NextElapseUSecRealtime')))
+    observed = _show(service, transport)
+    if observed is None:
+        return None, worker
+    worker.update(state='observed', source='systemctl --user show', unit=service,
+                  active_state=observed['ActiveState'], sub_state=observed['SubState'],
+                  unit_file_state=observed['UnitFileState'])
+    result = observed.get('Result')
+    worker['result'] = result if result in ('success', 'exit-code', 'signal', 'timeout', 'core-dump', 'watchdog', 'start-limit-hit', 'resources', 'protocol') else None
+    code = observed.get('ExecMainStatus', '')
+    worker['exec_main_status'] = int(code) if re.fullmatch(r'[0-9]{1,3}', code) and int(code) <= 255 else None
+    active, sub = observed['ActiveState'], observed['SubState']
+    running = True if (active == 'active' and sub == 'running') or (active == 'activating' and sub in ('start', 'start-pre', 'start-post')) else None
+    if active in ('inactive', 'failed') or (active == 'active' and sub == 'exited'):
+        running = False
+    return running, worker
+
+
 def saved_reports(config=None):
     config = _config(config)
     rows, _ = _receipts(config)
@@ -272,6 +373,7 @@ def saved_reports(config=None):
         result.append({'id': row['id'], 'title': 'Scheduled research · ' + str(row.get('symbol') or 'unselected'),
                        'created_at': _iso(row['started_at']), 'account': row.get('account'), 'symbol': row.get('symbol'),
                        'status': row.get('status'), 'rating': row.get('rating'),
+                       'research_outcome': _research_outcome(row, artifact is not None),
                        'started_at': row.get('started_at'), 'completed_at': row.get('completed_at'),
                        'reason': row.get('reason'), 'research_purpose': row.get('research_purpose'),
                        'card_status': (row.get('research_card') or {}).get('status') if isinstance(row.get('research_card'), dict) else None,
@@ -297,21 +399,35 @@ def service_status(config=None):
     root = _root(config)
     schedule = {'state': 'unverified', 'on_calendar': [], 'next_run': None, 'source': None}
     raw_path = config.get('TRADING_SCHEDULE_PATH')
+    timer = None
     if raw_path:
         path = Path(raw_path).expanduser().resolve()
         try:
             raw = _read(path.parent, path)
+            timer = path.name
             schedule.update(source='configured systemd timer unit', sha256=hashlib.sha256(raw).hexdigest(),
                             on_calendar=[line.split('=', 1)[1].strip() for line in raw.decode().splitlines() if line.startswith('OnCalendar=')])
         except (OSError, ValueError, UnicodeError):
             schedule['state'] = 'unavailable'
     try:
-        enabled = bool(_read(root, root / 'enabled'))
+        _read(root, root / 'enabled')
+        enabled = True
     except FileNotFoundError:
         enabled = False if info['available'] else None
     except (OSError, ValueError):
         enabled = None
+    worker_active, worker = _live_status(config, timer, schedule)
+    latest = None
+    if rows:
+        row, checksum, _ = rows[0]
+        latest = {key: row.get(key) for key in ['id', 'status', 'symbol', 'started_at', 'completed_at']}
+        try:
+            _artifact(row, checksum, config)
+            has_report = True
+        except ReportNotFound:
+            has_report = False
+        latest['research_outcome'] = _research_outcome(row, has_report)
     return _clean({'observed_at': _iso(), 'source': 'native-paper-research', 'account': _account(config),
-                   **info, 'enabled': enabled, 'worker_active': None, 'schedule': schedule,
-                   'latest_run': ({key: rows[0][0].get(key) for key in ['id', 'status', 'symbol', 'started_at', 'completed_at']} if rows else None),
-                   'runs_observed': len(rows), 'note': 'Receipts describe research outcomes; process health and the next scheduled firing are unverified.'})
+                   **info, 'enabled': enabled, 'worker_active': worker_active, 'worker': worker, 'schedule': schedule,
+                   'latest_run': latest,
+                   'runs_observed': len(rows), 'note': 'Research outcome, observed worker state, timer state and the native enabled marker are independent; systemd success is not research success.'})

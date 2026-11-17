@@ -1,6 +1,9 @@
 import hashlib
 import json
+import os
+from types import SimpleNamespace
 import sqlite3
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -16,6 +19,12 @@ RUN_ID = '12345678-1234-1234-1234-123456789abc'
 
 class PortfolioTests(unittest.TestCase):
     def setUp(self):
+        uid = patch('bridge.portfolio.os.geteuid', return_value=1000)
+        user = patch('bridge.portfolio.pwd.getpwuid', return_value=SimpleNamespace(pw_name='jonas'))
+        uid.start()
+        user.start()
+        self.addCleanup(uid.stop)
+        self.addCleanup(user.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
@@ -224,6 +233,154 @@ class PortfolioTests(unittest.TestCase):
         report.parent.symlink_to(outside, target_is_directory=True)
         with self.assertRaises(ReportNotFound):
             report_artifact(RUN_ID, self.config)
+
+    def live_properties(self, active='inactive', sub='dead', result='success', code='0'):
+        timer = 'ActiveState=active\nSubState=waiting\nUnitFileState=enabled\nUnit=research.service\nNextElapseUSecRealtime=Tue 2026-11-17 12:10:18 UTC\n'
+        service = f'ActiveState={active}\nSubState={sub}\nUnitFileState=static\nResult={result}\nExecMainStatus={code}\n'
+        return [subprocess.CompletedProcess([], 0, timer, ''), subprocess.CompletedProcess([], 0, service, '')]
+
+    def test_observed_next_run_and_idle_service_preserve_failed_research(self):
+        self.receipt(status='failed', error='SanitizedError')
+        (self.reports / 'enabled').touch()
+        with patch('bridge.portfolio.subprocess.run', side_effect=self.live_properties()) as run:
+            status = service_status(self.config)
+        self.assertTrue(status['enabled'])
+        self.assertFalse(status['worker_active'])
+        self.assertEqual(status['schedule']['next_run'], '2026-11-17T12:10:18+00:00')
+        self.assertEqual(status['latest_run']['status'], 'failed')
+        self.assertEqual(status['latest_run']['research_outcome'], 'failed')
+        self.assertEqual(status['worker']['exec_main_status'], 0)
+        self.assertEqual(saved_reports(self.config)[0]['research_outcome'], 'failed')
+        for call in run.call_args_list:
+            self.assertEqual(call.args[0][:3], ['systemctl', '--user', 'show'])
+            self.assertEqual(call.kwargs['timeout'], 2)
+            self.assertIs(call.kwargs['shell'], False)
+            self.assertNotIn('Environment', str(call.args[0]))
+            self.assertNotIn('ExecStart', str(call.args[0]))
+
+    def test_root_observer_requires_explicit_native_identity_and_keeps_failed_history(self):
+        self.receipt(status='failed', error='SanitizedError')
+        with patch('bridge.portfolio.os.geteuid', return_value=0), patch('bridge.portfolio.subprocess.run') as run:
+            status = service_status(self.config)
+        run.assert_not_called()
+        self.assertIsNone(status['worker_active'])
+        self.assertEqual(status['latest_run']['research_outcome'], 'failed')
+
+    def test_root_native_identity_uses_local_user_transport_without_root_bus_or_keys(self):
+        config = {**self.config, 'TRADING_NATIVE_SERVICE_USER': 'jonas'}
+        with patch('bridge.portfolio.os.geteuid', return_value=0), \
+             patch.dict(os.environ, {'OPENCODE_GO_API_KEY': 'private-fixture', 'DBUS_SESSION_BUS_ADDRESS': 'root-bus'}), \
+             patch('bridge.portfolio.subprocess.run', side_effect=self.live_properties()) as run:
+            status = service_status(config)
+        self.assertFalse(status['worker_active'])
+        for call in run.call_args_list:
+            self.assertEqual(call.args[0][:4], ['systemctl', '--user', '--machine=jonas@.host', 'show'])
+            self.assertNotIn('OPENCODE_GO_API_KEY', call.kwargs['env'])
+            self.assertNotIn('DBUS_SESSION_BUS_ADDRESS', call.kwargs['env'])
+            self.assertNotIn('XDG_RUNTIME_DIR', call.kwargs['env'])
+
+    def test_invalid_native_users_never_execute(self):
+        for user in ['--user', 'jonas@other', 'jonas user', '../jonas', '', 'root']:
+            with patch('bridge.portfolio.os.geteuid', return_value=0), patch('bridge.portfolio.subprocess.run') as run:
+                status = service_status({**self.config, 'TRADING_NATIVE_SERVICE_USER': user})
+            with self.subTest(user=user):
+                run.assert_not_called()
+                self.assertIsNone(status['worker_active'])
+
+    def test_nonroot_observer_queries_only_current_native_user(self):
+        for configured in [None, 'jonas', 'someone-else']:
+            config = dict(self.config)
+            if configured is not None:
+                config['TRADING_NATIVE_SERVICE_USER'] = configured
+            with patch('bridge.portfolio.os.geteuid', return_value=1000), \
+                 patch('bridge.portfolio.pwd.getpwuid', return_value=SimpleNamespace(pw_name='jonas')), \
+                 patch('bridge.portfolio.subprocess.run', side_effect=self.live_properties()) as run:
+                status = service_status(config)
+            if configured == 'someone-else':
+                run.assert_not_called()
+                self.assertIsNone(status['worker_active'])
+            else:
+                self.assertFalse(status['worker_active'])
+                self.assertEqual(run.call_args_list[0].args[0][:3], ['systemctl', '--user', 'show'])
+
+    def test_sanitized_six_native_receipts_keep_five_failures_and_one_complete(self):
+        for index in range(6):
+            identity = f'12345678-1234-1234-1234-{index:012d}'
+            started = 1794873600 + index * 7200
+            complete = index == 5
+            row = {'id': identity, 'account': 'global-paper', 'status': 'complete' if complete else 'failed',
+                   'started_at': started, 'completed_at': started + 60,
+                   'research_card': {'status': 'complete'} if complete else {}}
+            if not complete:
+                row['error'] = 'SanitizedError'
+            day = datetime.fromtimestamp(started, timezone.utc).date().isoformat()
+            (self.reports / f'{day}-{identity}.json').write_text(json.dumps(row))
+            if complete:
+                report = self.reports / identity / 'reports/complete_report.html'
+                report.parent.mkdir(parents=True)
+                report.write_text('<p>Saved synthetic report</p>')
+        reports = saved_reports(self.config)
+        self.assertEqual([row['status'] for row in reports], ['complete'] + ['failed'] * 5)
+        self.assertEqual([row['research_outcome'] for row in reports], ['complete'] + ['failed'] * 5)
+        with patch('bridge.portfolio.subprocess.run', side_effect=self.live_properties()):
+            self.assertEqual(service_status(self.config)['latest_run']['research_outcome'], 'complete')
+
+    def test_observer_timeout_keeps_saved_history_and_unknown_process_state(self):
+        self.receipt(status='failed', error='SanitizedError')
+        with patch('bridge.portfolio.subprocess.run', side_effect=subprocess.TimeoutExpired('systemctl', 2)):
+            status = service_status(self.config)
+        self.assertIsNone(status['worker_active'])
+        self.assertEqual(status['worker']['state'], 'unverified')
+        self.assertEqual(status['schedule']['state'], 'unverified')
+        self.assertEqual(saved_reports(self.config)[0]['research_outcome'], 'failed')
+
+    def test_actual_running_failed_and_unavailable_service_metadata(self):
+        self.receipt(status='researched', research_card={'status': 'complete'})
+        for active, sub, expected in [('active', 'running', True), ('activating', 'start', True),
+                                      ('failed', 'failed', False), ('inactive', 'dead', False)]:
+            with patch('bridge.portfolio.subprocess.run', side_effect=self.live_properties(active, sub, 'exit-code', '1')):
+                status = service_status(self.config)
+            self.assertIs(status['worker_active'], expected)
+            self.assertEqual(status['latest_run']['research_outcome'], 'execution_pending')
+        with patch('bridge.portfolio.subprocess.run', side_effect=FileNotFoundError):
+            status = service_status(self.config)
+        self.assertIsNone(status['worker_active'])
+        self.assertIsNone(status['schedule']['next_run'])
+        self.assertEqual(len(saved_reports(self.config)), 1)
+
+    def test_invalid_units_unknown_times_and_properties_never_imply_disabled(self):
+        invalid = self.root / '--bad.timer'
+        invalid.write_text('[Timer]\nOnCalendar=daily\n')
+        with patch('bridge.portfolio.subprocess.run') as run:
+            status = service_status({**self.config, 'TRADING_SCHEDULE_PATH': str(invalid)})
+        run.assert_not_called()
+        self.assertIsNone(status['worker_active'])
+        fixtures = self.live_properties()
+        fixtures[0].stdout = fixtures[0].stdout.replace('Tue 2026-11-17 12:10:18 UTC', 'n/a')
+        with patch('bridge.portfolio.subprocess.run', side_effect=fixtures):
+            self.assertIsNone(service_status(self.config)['schedule']['next_run'])
+        fixtures = self.live_properties()
+        fixtures[0].stdout = fixtures[0].stdout.replace('research.service', '--bad.service')
+        with patch('bridge.portfolio.subprocess.run', side_effect=fixtures) as run:
+            status = service_status(self.config)
+        self.assertEqual(run.call_count, 1)
+        self.assertIsNone(status['worker_active'])
+        with patch('bridge.portfolio.subprocess.run', return_value=subprocess.CompletedProcess([], 0, 'ActiveState=inactive\nSubState=dead\n', '')):
+            status = service_status(self.config)
+        self.assertIsNone(status['worker_active'])
+        self.assertEqual(status['schedule']['state'], 'unverified')
+
+    def test_completed_receipt_requires_research_card_and_report_for_research_complete(self):
+        path, report = self.receipt(status='complete', execution={'order_id': None})
+        self.assertEqual(saved_reports(self.config)[0]['research_outcome'], 'unverified')
+        row = json.loads(path.read_text())
+        row['research_card'] = {'status': 'complete'}
+        path.write_text(json.dumps(row))
+        self.assertEqual(saved_reports(self.config)[0]['research_outcome'], 'complete')
+        row['error'] = 'SanitizedError'
+        path.write_text(json.dumps(row))
+        self.assertEqual(saved_reports(self.config)[0]['status'], 'complete')
+        self.assertEqual(saved_reports(self.config)[0]['research_outcome'], 'failed')
 
     def test_status_reads_schedule_without_mutating_native_enabled_marker(self):
         (self.reports / 'enabled').write_text('paper research enabled\n')

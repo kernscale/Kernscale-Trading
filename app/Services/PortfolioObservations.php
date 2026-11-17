@@ -70,14 +70,41 @@ class PortfolioObservations
     }
 
     /** @return list<array{observed_at: string, equity: string, source: string, market_asof: string|null}> */
-    public function history(string $account): array
+    public function history(string $account, string $period = 'monthly'): array
     {
-        return array_values(PortfolioValuation::where('account', $account)->latest('observed_at')->limit(1000)->get()
-            ->reverse()->map(fn (PortfolioValuation $valuation) => [
-                'observed_at' => $valuation->observed_at->toIso8601String(),
-                'equity' => $valuation->equity,
-                'source' => $valuation->source,
-                'market_asof' => $valuation->market_asof?->toIso8601String(),
-            ])->all());
+        $days = match ($period) {
+            'weekly' => 7, 'monthly' => 30, 'quarterly' => 90, 'yearly' => 365,
+            default => throw new \InvalidArgumentException('Unsupported observation history period.'),
+        };
+        $query = PortfolioValuation::where('account', $account)->where('source', 'native-paper-ledger');
+        $latest = (clone $query)->latest('observed_at')->first();
+        if ($latest === null) {
+            return [];
+        }
+        $anchor = $latest->observed_at->toImmutable()->utc();
+        $bins = [];
+        $first = $latest;
+        foreach ($query->whereBetween('observed_at', [$anchor->subDays($days), $anchor])
+            ->select(['id', 'observed_at', 'equity', 'source', 'market_asof'])->lazyById(1000) as $valuation) {
+            $key = $valuation->observed_at->utc()->format(in_array($period, ['weekly', 'monthly'], true) ? 'Y-m-d-H' : 'Y-m-d');
+            if (! isset($bins[$key]) || $valuation->observed_at->gt($bins[$key]->observed_at)) {
+                $bins[$key] = $valuation;
+            }
+            if ($valuation->observed_at->lt($first->observed_at)) {
+                $first = $valuation;
+            }
+        }
+        $selected = [];
+        foreach ([...array_values($bins), $first, $latest] as $valuation) {
+            $selected[$valuation->id] = $valuation;
+        }
+        usort($selected, fn (PortfolioValuation $left, PortfolioValuation $right) => $left->observed_at <=> $right->observed_at);
+
+        return array_map(fn (PortfolioValuation $valuation) => [
+            'observed_at' => $valuation->observed_at->toIso8601String(),
+            'equity' => $valuation->equity,
+            'source' => $valuation->source,
+            'market_asof' => $valuation->market_asof?->toIso8601String(),
+        ], $selected);
     }
 }

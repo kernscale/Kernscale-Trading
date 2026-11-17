@@ -28,7 +28,12 @@ def finish_tool(command):
     for index in range(int(os.environ.get('OMP_FAKE_BURST', '0'))):
         send({'type': 'message_update', 'message': {'role': 'assistant', 'content': []}, 'assistantMessageEvent': {'type': 'text_delta', 'delta': 'x'}})
     text = command['result']['content'][0]['text']
-    send({'type': 'message_end', 'message': {'role': 'assistant', 'content': [{'type': 'text', 'text': text}]}})
+    message = {'role': 'assistant', 'content': [{'type': 'text', 'text': text}]}
+    if os.environ.get('OMP_FAKE_USAGE'):
+        message.update(usage=json.loads(os.environ['OMP_FAKE_USAGE']), model='offline-fixture-model',
+                       provider='qualification-fixture', responseId='response-fixture',
+                       providerPayload={'private': 'DO_NOT_EMIT_PRIVATE_MARKER'})
+    send({'type': 'message_end', 'messageId': 'message-fixture', 'message': message})
     result = {'type': 'prompt_result', 'id': prompt_id, 'agentInvoked': True, 'status': 'completed', 'sessionSettled': True}
     if os.environ.get('OMP_FAKE_PROMPT_ERROR') == '1':
         result.update(status='error', error={'message': 'offline fixture failure', 'retryable': False})
@@ -55,6 +60,15 @@ for line in sys.stdin:
         session_file = active_file or directory / os.environ.get('OMP_FAKE_ALLOCATED_FILE', 'native-session.jsonl')
         active_file = session_file
         data = {'sessionId': 'offline-session', 'sessionFile': str(session_file), 'isSettled': False}
+        if os.environ.get('OMP_FAKE_CONTEXT'):
+            data['contextUsage'] = json.loads(os.environ['OMP_FAKE_CONTEXT'])
+            data['systemPrompt'] = ['DO_NOT_EMIT_PRIVATE_MARKER']
+            data['model'] = {'id': 'offline-fixture-model', 'name': 'Fixture', 'api': 'openai-completions',
+                'provider': 'qualification-fixture', 'baseUrl': 'http://DO_NOT_EMIT_PRIVATE_MARKER',
+                'reasoning': False, 'input': ['text'],
+                'cost': {'input': 999, 'output': 999, 'cacheRead': 999, 'cacheWrite': 999},
+                'contextWindow': None, 'maxTokens': None,
+                'headers': {'Authorization': 'DO_NOT_EMIT_PRIVATE_MARKER'}}
     if kind == 'switch_session':
         candidate = Path(command['sessionPath'])
         if not candidate.is_file():

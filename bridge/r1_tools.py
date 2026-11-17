@@ -6,9 +6,11 @@ from pathlib import Path
 import threading
 
 
-def build_tools(reader, emit, host_tool, session_dir):
+def build_tools(reader, emit, host_tool, session_dir, *, session_identity=None):
     from trading_r1.assembly import build_run_registry, build_tool_registry, builtin_skill_registry
     from trading_r1.runtime.dispatch import dispatch
+    from trading_r1.providers.usage import captured, metered
+    from bridge.omp_client import reported_counts, metric_label, metric_number
     from trading_r1.runtime.run_state import RunPolicy
     from trading_r1.runtime.skill_registry import SkillSessionState
     from trading_r1.runtime.tool_registry import ToolSessionState
@@ -53,8 +55,17 @@ def build_tools(reader, emit, host_tool, session_dir):
     def bind(name):
         def execute(args, context):
             with lock:
-                result = asyncio.run(dispatch(name, args, registry=registry, session_state=state,
-                                              call_id=context.tool_call_id, emit=emit))
+                with metered() as meter, captured() as calls:
+                    result = asyncio.run(dispatch(name, args, registry=registry, session_state=state,
+                                                  call_id=context.tool_call_id, emit=emit))
+                reader_calls = meter.get(reader.name)
+                if reader_calls:
+                    counts = reported_counts(reader_calls, ('prompt', 'completion')) if calls else None
+                    emit('r1_reader_usage', {'source': 'r1_reader_reported',
+                        'native_session_id': metric_label((session_identity or {}).get('native_session_id')),
+                        'tool_call_id': context.tool_call_id, 'profile': metric_label(reader.name),
+                        'model': metric_label(reader.model), 'calls': metric_number(reader_calls.get('calls')),
+                        'available': counts is not None, 'counts': counts, 'cost': None})
                 if persistence_errors:
                     raise RuntimeError('Evidence persistence failed; research stopped')
                 if not result.ok:

@@ -1,0 +1,9 @@
+# Observed portfolio history
+
+`GET /dashboard` and `GET /portfolio` accept the existing `period` query values: `weekly` (7 days), `monthly` (30, default), `quarterly` (90), and `yearly` (365). Unknown values produce normal Laravel validation errors (422 for JSON). No frontend change is required for existing period controls.
+
+For the trusted snapshot account, history selects the full requested interval ending at the latest stored `native-paper-ledger` observation, rather than limiting raw rows before period selection. Ending at the latest actual capture preserves outage views; no current-time or synthetic endpoint is invented.
+
+The response retains the existing list shape: `{observed_at, equity, source, market_asof}`. Equity remains a decimal string, timestamps retain their actual capture/market instants, and `source` remains `native-paper-ledger`. Weekly/monthly views select the last actual observation in each UTC hour; quarterly/yearly views select the last actual observation in each UTC day. The first actual observation inside the interval and latest actual observation are retained separately when needed. Thus the response has at most 722 original points across supported windows, while the query traverses the full interval through 1,000-row keyset chunks. It neither fetches the entire history into memory nor discards older stored data.
+
+No equity averaging, interpolation, reconstructed history, return adjustment or deletion occurs. Snapshot metrics and all return calculations remain unchanged. This sampled chart series represents observed equity, not investment return: funding changes still affect its level. `history_provenance` describes the sampling. Server-side callers may use `PortfolioObservations::history($account, $period = 'monthly')`; unsupported direct-service periods throw `InvalidArgumentException`.

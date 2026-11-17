@@ -16,6 +16,35 @@ from unittest.mock import patch
 @unittest.skipUnless(importlib.util.find_spec('omp_rpc') and importlib.util.find_spec('trading_r1'),
                      'requires operator-pinned OMP SDK and R1 packages')
 class NativeAdapterTest(unittest.TestCase):
+    def test_native_reader_usage_is_separate_and_tool_scoped(self):
+        from omp_rpc import host_tool
+        from trading_r1.providers.profiles import ModelProfile
+        from trading_r1.providers.usage import record_openai
+        from trading_r1.runtime.dispatch import dispatch as native_dispatch
+        from bridge.r1_tools import build_tools
+
+        reader = ModelProfile(name='offline-reader', model='offline')
+        for usage, expected in ((SimpleNamespace(prompt_tokens=9, completion_tokens=4), {'prompt': 9, 'completion': 4}),
+                                (None, None), (SimpleNamespace(prompt_tokens=0, completion_tokens=0), None)):
+            with self.subTest(usage=usage), tempfile.TemporaryDirectory() as directory:
+                events = []
+
+                async def dispatch(*args, **kwargs):
+                    record_openai(reader.name, SimpleNamespace(usage=usage))
+                    return await native_dispatch(*args, **kwargs)
+
+                with patch('trading_r1.runtime.dispatch.dispatch', side_effect=dispatch), patch.dict(os.environ, {'TAURIC_API_KEY': ''}):
+                    tools = build_tools(reader, lambda kind, payload: events.append((kind, payload)), host_tool, directory,
+                                        session_identity={'native_session_id': 'native-fixture'})
+                    calc = next(tool for tool in tools if tool.name == 'calc')
+                    calc.execute({'expression': '1+2'}, SimpleNamespace(tool_call_id='reader-call'))
+                metrics = [payload for kind, payload in events if kind == 'r1_reader_usage']
+                self.assertEqual(len(metrics), 1)
+                self.assertEqual(metrics[0], {'source': 'r1_reader_reported', 'native_session_id': 'native-fixture',
+                    'tool_call_id': 'reader-call', 'profile': 'offline-reader', 'model': 'offline', 'calls': 1,
+                    'available': expected is not None, 'counts': expected, 'cost': None})
+                self.assertFalse(any(kind == 'usage' for kind, _ in events))
+
     def test_worker_uses_native_sdk_and_restricted_tools(self):
         from omp_rpc import RpcClient
         from bridge import worker

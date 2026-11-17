@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\EnsureSecurityEnrollment;
 use App\Models\IntegrationSnapshot;
 use App\Models\PortfolioValuation;
+use App\Models\User;
 use App\Services\PortfolioObservations;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class ValuationHistoryTest extends TestCase
@@ -96,7 +99,7 @@ class ValuationHistoryTest extends TestCase
         $this->assertSame('10000.00000000', $row->deposits);
     }
 
-    public function test_chart_window_is_bounded_without_deleting_older_financial_observations(): void
+    public function test_full_period_retains_older_actual_endpoints_before_bounded_downsampling(): void
     {
         $rows = [];
         $start = CarbonImmutable::parse('2026-11-12T00:00:00Z');
@@ -108,9 +111,68 @@ class ValuationHistoryTest extends TestCase
         }
         PortfolioValuation::insert($rows);
         $history = app(PortfolioObservations::class)->history('global-paper');
-        $this->assertCount(1000, $history);
-        $this->assertSame($start->addMinutes(10)->toIso8601String(), $history[0]['observed_at']);
-        $this->assertSame($start->addMinutes(1001 * 5)->toIso8601String(), $history[999]['observed_at']);
+        $this->assertLessThanOrEqual(1000, count($history));
+        $this->assertSame($start->toIso8601String(), $history[0]['observed_at']);
+        $this->assertSame($start->addMinutes(1001 * 5)->toIso8601String(), $history[array_key_last($history)]['observed_at']);
         $this->assertDatabaseCount('portfolio_valuations', 1002);
+    }
+
+    public function test_supported_periods_span_the_full_window_with_original_bin_last_points(): void
+    {
+        $anchor = CarbonImmutable::parse('2026-11-16T12:30:00Z');
+        $rows = [];
+        for ($day = 0; $day <= 366; $day++) {
+            foreach ([0, 1] as $offset) {
+                $at = $anchor->subDays($day)->subMinutes($offset * 5);
+                $rows[] = ['account' => 'global-paper', 'bucket_at' => $at, 'observed_at' => $at,
+                    'market_asof' => $at->subSeconds(15), 'equity' => 10000 + $day * 10 + $offset,
+                    'source' => 'native-paper-ledger', 'digest' => hash('sha256', $at->toIso8601String()), 'provenance' => '{}'];
+            }
+        }
+        PortfolioValuation::insert($rows);
+        foreach (['weekly' => 7, 'monthly' => 30, 'quarterly' => 90, 'yearly' => 365] as $period => $days) {
+            $history = app(PortfolioObservations::class)->history('global-paper', $period);
+            $this->assertSame($anchor->subDays($days)->toIso8601String(), $history[0]['observed_at']);
+            $this->assertSame($anchor->toIso8601String(), $history[array_key_last($history)]['observed_at']);
+            $this->assertCount($days + 1, $history);
+            $this->assertLessThanOrEqual(1000, count($history));
+            $this->assertSame('10000.00000000', $history[array_key_last($history)]['equity']);
+            $this->assertSame($anchor->subSeconds(15)->toIso8601String(), $history[array_key_last($history)]['market_asof']);
+        }
+        $this->assertDatabaseCount('portfolio_valuations', 734);
+    }
+
+    public function test_history_ignores_other_accounts_and_unverified_sources_when_anchoring(): void
+    {
+        $service = app(PortfolioObservations::class);
+        $service->record($this->observation());
+        $other = $this->observation('2026-11-16T12:10:00Z');
+        $other['provenance']['account'] = 'other-account';
+        $service->record($other);
+        $row = PortfolioValuation::firstOrFail()->replicate();
+        $row->forceFill(['source' => 'backtest', 'observed_at' => '2099-01-01T00:00:00Z', 'bucket_at' => '2099-01-01T00:00:00Z'])->save();
+        $history = $service->history('global-paper', 'yearly');
+        $this->assertCount(1, $history);
+        $this->assertSame('native-paper-ledger', $history[0]['source']);
+        $this->assertSame('2026-11-16T12:01:23+00:00', $history[0]['observed_at']);
+    }
+
+    public function test_both_http_payloads_honor_the_existing_period_query_and_preserve_metrics(): void
+    {
+        $this->withoutMiddleware(EnsureSecurityEnrollment::class);
+        $this->actingAs(User::factory()->create());
+        $service = app(PortfolioObservations::class);
+        $old = $this->observation('2026-11-01T12:01:23Z');
+        $old['freshness']['market_asof'] = '2026-11-01T12:00:30Z';
+        $service->record($old);
+        $current = $this->observation();
+        $service->record($current);
+        IntegrationSnapshot::create(['kind' => 'portfolio', 'payload' => $current, 'observed_at' => $current['observed_at']]);
+        foreach (['/dashboard' => 'portfolio', '/portfolio' => 'snapshot'] as $path => $prop) {
+            $this->get($path.'?period=weekly')->assertOk()->assertInertia(fn (Assert $page) => $page->has($prop.'.history', 1)->where($prop.'.metrics', $current['metrics']));
+            $this->get($path.'?period=yearly')->assertOk()->assertInertia(fn (Assert $page) => $page->has($prop.'.history', 2)->where($prop.'.history.0.observed_at', '2026-11-01T12:01:23+00:00')->where($prop.'.metrics', $current['metrics']));
+            $this->get($path)->assertOk()->assertInertia(fn (Assert $page) => $page->has($prop.'.history', 2));
+            $this->getJson($path.'?period=unsupported')->assertUnprocessable()->assertJsonValidationErrors('period');
+        }
     }
 }

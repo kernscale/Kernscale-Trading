@@ -24,6 +24,7 @@ class HubController extends Controller
 
     public function dashboard(Request $request): Response
     {
+        $period = $request->validate(['period' => 'sometimes|in:weekly,monthly,quarterly,yearly'])['period'] ?? 'monthly';
         $reports = IntegrationSnapshot::where('kind', 'native_reports')->first()?->payload['reports'] ?? [];
         $latestDecision = null;
         foreach (is_array($reports) ? $reports : [] as $report) {
@@ -34,7 +35,7 @@ class HubController extends Controller
         }
 
         return Inertia::render('hub/dashboard', [
-            'portfolio' => $this->portfolioPayload(IntegrationSnapshot::where('kind', 'portfolio')->first()),
+            'portfolio' => $this->portfolioPayload(IntegrationSnapshot::where('kind', 'portfolio')->first(), $period),
             'latestDecision' => $latestDecision,
             'agentStatus' => IntegrationSnapshot::where('kind', 'agents')->first()?->payload,
             'counts' => ['sessions' => ResearchSession::where('user_id', $request->user()->id)->count(), 'outputs' => ResearchOutput::visibleTo($request->user())->count(), 'pendingReview' => $request->user()->hasRole('owner') ? ResearchOutput::where('status', 'in_review')->count() : 0],
@@ -44,9 +45,10 @@ class HubController extends Controller
 
     public function portfolio(Request $request): Response
     {
+        $period = $request->validate(['period' => 'sometimes|in:weekly,monthly,quarterly,yearly'])['period'] ?? 'monthly';
         $snapshot = IntegrationSnapshot::where('kind', 'portfolio')->first();
 
-        return Inertia::render('hub/portfolio', ['watchlists' => DB::table('watchlist_items')->where('user_id', $request->user()->id)->orderBy('symbol')->get(), 'snapshot' => $this->portfolioPayload($snapshot), 'freshness' => ['stale' => ! $snapshot || $snapshot->observed_at->lt(now()->subSeconds(config('trading.stale_after_seconds'))), 'observed_at' => $snapshot?->observed_at?->toIso8601String()]]);
+        return Inertia::render('hub/portfolio', ['watchlists' => DB::table('watchlist_items')->where('user_id', $request->user()->id)->orderBy('symbol')->get(), 'snapshot' => $this->portfolioPayload($snapshot, $period), 'freshness' => ['stale' => ! $snapshot || $snapshot->observed_at->lt(now()->subSeconds(config('trading.stale_after_seconds'))), 'observed_at' => $snapshot?->observed_at?->toIso8601String()]]);
     }
 
     public function admin(Request $request): Response
@@ -57,7 +59,7 @@ class HubController extends Controller
     }
 
     /** @return array<string, mixed>|null */
-    private function portfolioPayload(?IntegrationSnapshot $snapshot): ?array
+    private function portfolioPayload(?IntegrationSnapshot $snapshot, string $period): ?array
     {
         if (! $snapshot) {
             return null;
@@ -65,8 +67,8 @@ class HubController extends Controller
         $payload = $snapshot->payload;
         $provenance = $payload['provenance'] ?? null;
         $account = is_array($provenance) ? ($provenance['account'] ?? null) : null;
-        $payload['history'] = is_string($account) ? app(PortfolioObservations::class)->history($account) : [];
-        $payload['history_provenance'] = 'Observed native valuations, with original capture timestamps.';
+        $payload['history'] = is_string($account) ? app(PortfolioObservations::class)->history($account, $period) : [];
+        $payload['history_provenance'] = 'Original native observations, sampled for the selected period.';
 
         return $payload;
     }
