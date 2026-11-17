@@ -65,6 +65,8 @@ jobs:
             tests/Feature/ReadinessTest.php tests/Feature/ProxyBoundaryTest.php \
             tests/Feature/CapitalioPreviewTest.php
       - name: Check runtime source contract
-        run: python3 -B deploy/tests/test_runtime.py
+        run: |
+          python3 -B deploy/tests/test_runtime.py
+          python3 -B deploy/tests/test_image.py
       - name: Preserve complete selected Capitalio reference
         run: python3 -B tests/Design/test_capitalio_reference.py
