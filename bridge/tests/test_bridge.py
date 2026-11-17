@@ -57,6 +57,12 @@ class BridgeTest(unittest.TestCase):
         self.assertEqual(self.client.put(self.url, headers={**HEADERS, 'X-Workspace-ID': 'other'}, json=self.body).status_code, 403)
         self.assertEqual(self.client.put(self.url, headers=HEADERS, json={**self.body, 'tenant_id': 'other'}).status_code, 403)
 
+    def test_production_factory_rejects_other_database_before_store_construction(self):
+        with patch.dict(os.environ, {'TRADING_BRIDGE_DB': self.directory.name + '/different.sqlite'}), patch('bridge.app.Store') as constructor:
+            with self.assertRaises(RuntimeError):
+                create_app(token=TOKEN)
+            constructor.assert_not_called()
+
     def test_replay_and_changed_payload(self):
         self.assertEqual(self.create().status_code, 200)
         self.assertEqual(self.create().status_code, 200)

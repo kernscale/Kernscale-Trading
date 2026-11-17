@@ -1,0 +1,22 @@
+# Fixed app subtree only; install the protected source/venv before enabling.
+[Unit]
+Description=Prepare private Trading Hub cgroup subtree
+After=local-fs.target
+Before=kernscale-trading-bridge.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/opt/kernscale/trading
+ExecStart=/opt/kernscale/trading/venv/bin/python -m bridge.deploy.lifecycle bootstrap
+RemainAfterExit=yes
+UMask=0077
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/sys/fs/cgroup
+CapabilityBoundingSet=CAP_DAC_OVERRIDE
+AmbientCapabilities=
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX

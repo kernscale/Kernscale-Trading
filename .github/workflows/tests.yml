@@ -117,4 +117,5 @@ jobs:
           "$RUNNER_TEMP/omp-sdk-tests/bin/python" -B -m unittest \
             bridge.tests.test_research_metrics bridge.tests.test_omp_stream bridge.tests.test_session_paths \
             bridge.tests.test_portfolio bridge.tests.test_bridge bridge.tests.test_attachment_tools \
-            bridge.tests.test_http_contract bridge.tests.test_clarifications bridge.tests.test_clarification_channel -v
+            bridge.tests.test_http_contract bridge.tests.test_clarifications bridge.tests.test_clarification_channel \
+            bridge.tests.test_host_lifecycle -v

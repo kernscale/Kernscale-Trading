@@ -15,6 +15,7 @@ from bridge.store import Conflict, Store
 from bridge.workspace_tools import Workspace
 
 SCOPE = 'kernscale-trading'
+PRODUCTION_DATABASE = '/var/lib/kernscale-trading-bridge/runs.sqlite'
 
 
 class RunRequest(BaseModel):
@@ -35,7 +36,10 @@ class RunRequest(BaseModel):
 
 def create_app(store=None, executor=None, token=None):
     from bridge.executor import IsolatedExecutor
-    store = store or Store(os.environ.get('TRADING_BRIDGE_DB', '/var/lib/kernscale-trading-bridge/runs.sqlite'))
+    if store is None:
+        if os.environ.get('TRADING_BRIDGE_DB', PRODUCTION_DATABASE) != PRODUCTION_DATABASE:
+            raise RuntimeError('production coordinator database must use its fixed lifecycle path')
+        store = Store(PRODUCTION_DATABASE)
     executor = executor or IsolatedExecutor(store)
     token = token or os.environ.get('TRADING_BRIDGE_TOKEN', '')
     if len(token) < 32:

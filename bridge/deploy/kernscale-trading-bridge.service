@@ -1,7 +1,8 @@
 # Host admission template only; do not enable until Linux isolation and runtime qualification pass.
 [Unit]
 Description=Private Kernscale Trading research coordinator
-After=network.target
+Requires=kernscale-trading-cgroup.service
+After=network.target kernscale-trading-cgroup.service
 
 [Service]
 Type=simple
@@ -10,6 +11,8 @@ Group=root
 WorkingDirectory=/opt/kernscale/trading
 EnvironmentFile=/etc/kernscale-trading/bridge.env
 ExecStart=/opt/kernscale/trading/venv/bin/uvicorn bridge.app:create_app --factory --host 127.0.0.1 --port 8863 --workers 1
+ExecStopPost=/opt/kernscale/trading/venv/bin/python -m bridge.deploy.lifecycle stop
+TimeoutStopSec=30
 UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true
