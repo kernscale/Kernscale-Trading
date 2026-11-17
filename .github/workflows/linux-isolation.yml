@@ -21,6 +21,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -B -m unittest bridge.tests.test_linux_qualification -v
+          stat --format='%n uid=%u mode=%a' / /opt /var/lib /usr/local/lib /sys/fs/cgroup
           python3 -m pip install --quiet --no-input --target "$RUNNER_TEMP/trading-isolation-deps" 'httpx==0.28.1'
           sudo -n env -i PATH=/usr/local/bin:/usr/bin:/bin LANG=C.UTF-8 \
             PYTHONPATH="$RUNNER_TEMP/trading-isolation-deps" \

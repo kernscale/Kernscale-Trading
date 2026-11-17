@@ -91,6 +91,7 @@ def qualify(expected_sha):
     phase = 'guard'
     try:
         base, group_root = guarded_paths(os.environ, expected_sha, platform=sys.platform, uid=os.geteuid())
+        phase = 'checkout'
         repository = Path(__file__).resolve().parents[2]
         require(Path(os.environ.get('GITHUB_WORKSPACE', '/nonexistent')).resolve(strict=True) == repository)
         git = ['git', '-c', f'safe.directory={repository}', '-C', str(repository)]
@@ -98,7 +99,9 @@ def qualify(expected_sha):
         require(head == expected_sha)
         require(subprocess.check_output([*git, 'status', '--porcelain', '--untracked-files=no'], text=True) == '')
         require('bridge' not in sys.modules)  # Run as a script, then import only the protected copy.
+        phase = 'parentPermissions'
         protected(base.parent)
+        phase = 'resourceAbsence'
         absent(base)
         absent(group_root)
         phase = 'prerequisites'
