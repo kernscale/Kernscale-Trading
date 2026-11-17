@@ -45,8 +45,10 @@ def finish_tool(command):
     if os.environ.get('OMP_FAKE_SESSION_DIR') and os.environ.get('OMP_FAKE_NO_PERSIST') != '1':
         session_file = active_file or Path(os.environ['OMP_FAKE_SESSION_DIR']) / 'native-session.jsonl'
         session_file.write_text('{"type":"message","message":{"role":"assistant"}}\n')
-    send({'type': 'tool_execution_update', 'toolCallId': 'call-1', 'toolName': 'calc', 'partialResult': {'content': [{'type': 'text', 'text': 'offline progress'}]}})
-    send({'type': 'tool_execution_end', 'toolCallId': 'call-1', 'toolName': 'calc', 'result': command['result'], 'isError': command.get('isError', False)})
+    call_id = 'clarification-call' if os.environ.get('OMP_FAKE_CLARIFICATION') == '1' else 'call-1'
+    tool_name = 'ask_user' if os.environ.get('OMP_FAKE_CLARIFICATION') == '1' else 'calc'
+    send({'type': 'tool_execution_update', 'toolCallId': call_id, 'toolName': tool_name, 'partialResult': {'content': [{'type': 'text', 'text': 'offline progress'}]}})
+    send({'type': 'tool_execution_end', 'toolCallId': call_id, 'toolName': tool_name, 'result': command['result'], 'isError': command.get('isError', False)})
     delay = float(os.environ.get('OMP_FAKE_DELAY', '0'))
     time.sleep(delay)
     if delay:
@@ -105,6 +107,9 @@ for line in sys.stdin:
         data = {'cancelled': False}
     if kind == 'prompt':
         prompt_id = command['id']
+    if kind == 'abort' and os.environ.get('OMP_FAKE_CLARIFICATION') == '1':
+        send({'type': 'host_tool_cancel', 'targetId': 'clarification-call'})
+        send({'type': 'prompt_result', 'id': prompt_id, 'agentInvoked': True, 'status': 'aborted', 'sessionSettled': True})
     send({'type': 'response', 'id': command['id'], 'command': kind, 'success': True, 'data': data})
     if kind == 'prompt':
         if os.environ.get('OMP_FAKE_EXIT_ON_PROMPT') == '1':
@@ -114,6 +119,10 @@ for line in sys.stdin:
             continue
         if os.environ.get('OMP_FAKE_ATTACHMENTS') == '1':
             attachment_call('attachment_list', 'attachment-list', {})
+            continue
+        if os.environ.get('OMP_FAKE_CLARIFICATION') == '1':
+            attachment_call('ask_user', 'clarification-call', {'questions': [{'question': 'Which scope?', 'header': 'Scope',
+                'options': [{'label': 'First', 'description': ''}, {'label': 'Second', 'description': ''}]}]})
             continue
         proposal = os.environ.get('OMP_FAKE_WORKSPACE') == '1'
         send({'type': 'tool_execution_start', 'toolCallId': 'call-1', 'toolName': 'workspace_propose' if proposal else 'calc', 'args': {'expression': '1+2'}})

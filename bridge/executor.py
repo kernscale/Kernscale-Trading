@@ -9,6 +9,7 @@ import threading
 from pathlib import Path
 
 from bridge.network import GO_BASE_URL
+from bridge.clarification_channel import ControlPump
 
 
 class IsolationUnavailable(RuntimeError):
@@ -97,6 +98,7 @@ class IsolatedExecutor:
     def run(self, researcher, run_id, body):
         process = None
         group = None
+        control = None
         try:
             uid, gid, home, env = self.admission(researcher)
             with self.lock:
@@ -119,11 +121,18 @@ class IsolatedExecutor:
                 self.processes[run_id] = process
                 self.store.transition(researcher, run_id, 'running')
             process.stdin.write(json.dumps(body) + '\n')
-            process.stdin.close()
+            process.stdin.flush()
+            control = ControlPump(self.store, researcher, run_id, process, lambda: self.cancel(run_id))
             finished = False
             for line in process.stdout:
                 event = json.loads(line)
                 kind = event['type']
+                if kind == 'clarification_requested':
+                    self.store.open_clarification(researcher, run_id, event['payload'])
+                    continue
+                if kind == 'clarification_consumed':
+                    self.store.consume_clarification(researcher, run_id, event['payload'])
+                    continue
                 if kind == 'completed':
                     finished = True
                 self.store.event(run_id, kind, event['payload'])
@@ -139,6 +148,10 @@ class IsolatedExecutor:
             self.store.event(run_id, 'error', {'message': 'Research runtime unavailable; operator admission or dependencies require attention'})
             self.store.transition(researcher, run_id, 'failed')
         finally:
+            if control is not None:
+                control.close()
+            if process and process.stdin:
+                process.stdin.close()
             with self.lock:
                 self.processes.pop(run_id, None)
             if group is not None:

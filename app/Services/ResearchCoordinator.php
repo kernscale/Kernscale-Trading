@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
 
 class ResearchCoordinator
 {
@@ -26,7 +27,7 @@ class ResearchCoordinator
 
         return DB::transaction(function () use ($user, $session, $prompt, $key, $attachmentIds) {
             ResearchSession::whereKey($session->id)->lockForUpdate()->firstOrFail();
-            abort_if($session->runs()->whereIn('status', ['queued', 'dispatching', 'waiting', 'running', 'collecting', 'cancel_requested'])->exists() && ! ResearchRun::where('user_id', $user->id)->where('idempotency_key', $key)->exists(), 409, 'A research turn is already active.');
+            abort_if($session->runs()->whereIn('status', ['queued', 'dispatching', 'waiting', 'waiting_for_input', 'running', 'collecting', 'cancel_requested'])->exists() && ! ResearchRun::where('user_id', $user->id)->where('idempotency_key', $key)->exists(), 409, 'A research turn is already active.');
             $attachments = app(ResearchAttachments::class)->snapshot($user, $session, $attachmentIds);
             $run = ResearchRun::firstOrCreate(['user_id' => $user->id, 'idempotency_key' => $key], [
                 'research_session_id' => $session->id, 'prompt' => $prompt, 'status' => 'queued', 'attachments' => $attachments, 'workspace' => app(WorkspaceProposals::class)->captureFor($session),
@@ -57,6 +58,36 @@ class ResearchCoordinator
     private function path(ResearchRun $run): string
     {
         return '/v1/researchers/'.$run->user_id.'/runs/'.$run->id;
+    }
+
+    /**
+     * @param  list<array{id: string, answer: string}>  $answers
+     * @return array<string, mixed>
+     */
+    public function answer(User $user, ResearchRun $run, string $requestId, array $answers): array
+    {
+        $run->refresh();
+        $this->authorize($user->fresh(), $run->session);
+        abort_unless($run->user_id === $user->id, 404);
+        $response = $this->bridge()->post($this->path($run).'/clarifications/'.$requestId.'/answer', ['answers' => $answers])->throw()->json();
+        abort_unless(is_array($response), 502, 'Invalid clarification receipt.');
+        $validator = Validator::make($response, [
+            'id' => 'required|uuid', 'status' => 'required|in:queued,dispatching,waiting,waiting_for_input,running,collecting,completed,cancel_requested,cancelled,failed,interrupted',
+            'clarification' => 'required|array', 'clarification.request_id' => 'required|uuid',
+            'clarification.status' => 'required|in:pending,accepted,consumed,expired,cancelled,interrupted',
+            'clarification.expires_at' => 'required|date',
+            'clarification.answered_at' => 'present|nullable|date', 'clarification.consumed_at' => 'present|nullable|date',
+        ]);
+        abort_if($validator->fails() || ($response['id'] ?? null) !== $run->id || ($response['clarification']['request_id'] ?? null) !== $requestId, 502, 'Invalid clarification receipt.');
+        $clarification = array_intersect_key($response['clarification'], array_flip(['request_id', 'status', 'expires_at', 'answered_at', 'consumed_at']));
+        foreach (['expires_at', 'answered_at', 'consumed_at'] as $field) {
+            abort_if($clarification[$field] !== null && (! is_string($clarification[$field]) || ! preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/D', $clarification[$field])), 502, 'Invalid clarification receipt.');
+        }
+        // Metadata-only terminal receipts must not seal partial text or skip final events.
+        $status = in_array($response['status'], ['completed', 'cancelled', 'failed', 'interrupted'], true) ? 'collecting' : $response['status'];
+        $this->ingest($run, ['status' => $status]);
+
+        return ['id' => $run->id, 'status' => $run->fresh()->status, 'clarification' => $clarification];
     }
 
     public function dispatch(ResearchRun $run): void
@@ -96,7 +127,7 @@ class ResearchCoordinator
     public function sync(ResearchRun $run): void
     {
         $run->refresh();
-        if (! in_array($run->status, ['dispatching', 'waiting', 'running', 'collecting', 'cancel_requested', 'interrupted'], true)) {
+        if (! in_array($run->status, ['dispatching', 'waiting', 'waiting_for_input', 'running', 'collecting', 'cancel_requested', 'interrupted'], true)) {
             return;
         }
         $user = $run->user->fresh();
@@ -148,14 +179,14 @@ class ResearchCoordinator
             if (($response['has_more'] ?? false) && in_array($status, ['completed', 'cancelled', 'failed', 'interrupted'], true)) {
                 $status = 'collecting';
             }
-            if (! in_array($status, ['queued', 'dispatching', 'waiting', 'running', 'collecting', 'completed', 'cancel_requested', 'cancelled', 'failed', 'interrupted'], true)) {
+            if (! in_array($status, ['queued', 'dispatching', 'waiting', 'waiting_for_input', 'running', 'collecting', 'completed', 'cancel_requested', 'cancelled', 'failed', 'interrupted'], true)) {
                 $status = 'interrupted';
             }
             // A late status poll must not undo a confirmed terminal result or pending cancellation.
             if (in_array($run->status, ['completed', 'cancelled', 'failed'], true)) {
                 $status = $run->status;
             }
-            if ($run->status === 'cancel_requested' && in_array($status, ['queued', 'waiting', 'running', 'dispatching'], true)) {
+            if ($run->status === 'cancel_requested' && in_array($status, ['queued', 'waiting', 'waiting_for_input', 'running', 'dispatching', 'collecting'], true)) {
                 $status = 'cancel_requested';
             }
             $run->status = $status;

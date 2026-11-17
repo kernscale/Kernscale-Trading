@@ -10,6 +10,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from bridge.attachment_tools import Attachment, validate_attachments
+from bridge.clarifications import Answers
 from bridge.store import Conflict, Store
 from bridge.workspace_tools import Workspace
 
@@ -144,5 +145,18 @@ def create_app(store=None, executor=None, token=None):
         if admitted and status == 'cancel_requested':
             executor.cancel(str(run_id))
         return {'id': str(run_id), 'status': status}
+
+    @app.post('/v1/researchers/{researcher}/runs/{run_id}/clarifications/{request_id}/answer', dependencies=[Depends(authenticate)])
+    def answer(researcher: int, run_id: UUID, request_id: UUID, body: Answers):
+        if researcher < 1:
+            raise HTTPException(403, 'scope mismatch')
+        try:
+            return store.answer_clarification(str(researcher), str(run_id), str(request_id), body.model_dump())
+        except KeyError:
+            raise HTTPException(404, 'clarification not found') from None
+        except Conflict as exc:
+            raise HTTPException(409, str(exc)) from None
+        except ValueError:
+            raise HTTPException(422, 'invalid clarification answers') from None
 
     return app

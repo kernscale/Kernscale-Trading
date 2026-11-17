@@ -20,7 +20,7 @@ class SessionActivity
         }
         $ids = $ownedSessions->modelKeys();
         $activeRuns = ResearchRun::whereIn('research_session_id', $ids)
-            ->whereIn('status', ['queued', 'dispatching', 'waiting', 'running', 'collecting', 'cancel_requested'])
+            ->whereIn('status', ['queued', 'dispatching', 'waiting', 'waiting_for_input', 'running', 'collecting', 'cancel_requested'])
             ->orderByDesc('created_at')->orderByDesc('id')
             ->get(['id', 'research_session_id', 'status'])->groupBy('research_session_id');
         $activity = DB::table('research_events')

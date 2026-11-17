@@ -7,6 +7,7 @@ use App\Http\Controllers\OutputHistoryController;
 use App\Http\Controllers\PortfolioToolsController;
 use App\Http\Controllers\ResearchArtifactController;
 use App\Http\Controllers\ResearchAttachmentController;
+use App\Http\Controllers\ResearchClarificationController;
 use App\Http\Controllers\ResearchController;
 use App\Http\Controllers\SessionReadController;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +28,7 @@ Route::middleware(['auth', 'verified', 'approved', 'security.enrolled'])->group(
     Route::post('/research/sessions', [ResearchController::class, 'create']);
     Route::post('/research/sessions/{session}/runs', [ResearchController::class, 'run']);
     Route::get('/research/runs/{run}/events', [ResearchController::class, 'events']);
+    Route::post('/research/runs/{run}/clarifications/{clarification}/answer', [ResearchClarificationController::class, 'answer'])->whereUuid(['run', 'clarification']);
     Route::post('/research/runs/{run}/cancel', [ResearchController::class, 'cancel']);
     Route::post('/research/runs/{run}/output', [ResearchArtifactController::class, 'store']);
     Route::post('/research/sessions/{session}/board', [ResearchController::class, 'card']);

@@ -40,6 +40,11 @@ def main():
     os.close(write_end)
     checks['descendantDetached'] = os.read(read_end, 1) == b'1' and os.getsid(child) == child
     os.close(read_end)
+    print(json.dumps({'type': 'clarification_requested', 'payload': {
+        'request_id': fixture['request_id'], 'tool_call_id': 'ci-clarification',
+        'questions': [{'id': '0', 'header': 'Research', 'question': 'Which scope?',
+                       'options': [{'label': 'Global', 'description': ''},
+                                   {'label': 'Regional', 'description': ''}]}]}}), flush=True)
     print(json.dumps({'type': 'fixture_ready', 'payload': {'checks': checks, 'child_pid': child}}), flush=True)
     while True:
         signal.pause()

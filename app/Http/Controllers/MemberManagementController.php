@@ -52,7 +52,7 @@ class MemberManagementController extends Controller
             ])->save();
             if ($status === 'revoked' || ! array_intersect(['owner', 'researcher'], $new['roles'])) {
                 ResearchRun::where('user_id', $target->id)->where('status', 'queued')->update(['status' => 'cancelled', 'completed_at' => now(), 'updated_at' => now()]);
-                ResearchRun::where('user_id', $target->id)->whereIn('status', ['dispatching', 'waiting', 'running', 'collecting', 'interrupted'])->update(['status' => 'cancel_requested', 'updated_at' => now()]);
+                ResearchRun::where('user_id', $target->id)->whereIn('status', ['dispatching', 'waiting', 'waiting_for_input', 'running', 'collecting', 'interrupted'])->update(['status' => 'cancel_requested', 'updated_at' => now()]);
             }
             DB::table('audit_entries')->insert(['user_id' => $actor->id, 'action' => 'member.updated', 'subject_id' => (string) $target->id,
                 'metadata' => json_encode(['old' => $old, 'new' => $new], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);

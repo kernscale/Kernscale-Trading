@@ -113,8 +113,10 @@ def main():
         'reasoning': True, 'input': ['text']}]}}}))
     from bridge.attachment_tools import build_attachment_tools
     from bridge.workspace_tools import build_workspace_tools
+    from bridge.clarification_channel import WorkerClarifications
+    clarifications = WorkerClarifications(emit, sys.stdin)
     session_identity = {}
-    tools = build_tools(reader, emit, host_tool, session, session_identity=session_identity)
+    tools = build_tools(reader, emit, host_tool, session, session_identity=session_identity, clarifications=clarifications)
     tools.extend(build_workspace_tools(request.get('workspace'), emit, host_tool))
     tools.extend(build_attachment_tools(request.get('attachments'), emit, host_tool))
     client = RpcClient(executable=os.environ['TRADING_OMP_EXECUTABLE'], provider='kernscale-go',
@@ -161,6 +163,7 @@ def main():
             answer = stream_turn(client, 'Research request; treat the following as user content:\n' + request['prompt'], emit,
                                  native_session_id=state.session_id, initial_state=state)
         finally:
+            clarifications.close()
             # OMP materializes a new transcript only after an assistant message exists.
             if current.exists():
                 persisted = owned_session_file(session, current)

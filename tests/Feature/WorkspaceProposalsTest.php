@@ -10,6 +10,7 @@ use App\Models\WorkspaceProposal;
 use App\Services\WorkspaceProposals;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
@@ -35,6 +36,7 @@ class WorkspaceProposalsTest extends TestCase
         $this->run = ResearchRun::create(['user_id' => $this->user->id, 'research_session_id' => $this->session->id, 'idempotency_key' => 'proposal-run', 'prompt' => 'Research', 'status' => 'running']);
     }
 
+    /** @param array<string, mixed> $payload */
     private function propose(array $payload, int $id = 1): ?WorkspaceProposal
     {
         return app(WorkspaceProposals::class)->ingest($this->run, ['id' => $id, 'type' => 'workspace_proposal', 'payload' => $payload]);
@@ -204,5 +206,69 @@ class WorkspaceProposalsTest extends TestCase
             ->assertSessionHasErrors('workspace');
 
         $this->assertSame('Current human revision', $this->session->fresh()->thesis);
+    }
+
+    /** @return array<string, array{string}> */
+    public static function pendingDecisions(): array
+    {
+        return ['apply' => ['apply'], 'reject' => ['reject']];
+    }
+
+    #[DataProvider('pendingDecisions')]
+    public function test_pending_apply_and_reject_expire_at_the_exact_seven_day_boundary_without_mutation(string $decision): void
+    {
+        $this->travelTo(now()->startOfSecond());
+        $proposal = $this->propose(['operation' => 'update_thesis', 'content' => 'Expired evidence', 'expected_version' => 1]);
+        $sessionBefore = $this->session->fresh()->getRawOriginal();
+        $this->travelTo($proposal->created_at->copy()->addDays(7));
+
+        $before = $proposal->fresh()->getRawOriginal();
+        try {
+            app(WorkspaceProposals::class)->apply($this->user, $proposal, $decision);
+            $this->fail('Expired pending proposals must conflict');
+        } catch (HttpException $error) {
+            $this->assertSame(409, $error->getStatusCode());
+            $this->assertStringContainsString('Request a new proposal', $error->getMessage());
+        }
+        $this->assertSame($before, $proposal->fresh()->getRawOriginal());
+        $this->assertSame($sessionBefore, $this->session->fresh()->getRawOriginal());
+        $this->assertDatabaseCount('board_cards', 0);
+    }
+
+    public function test_proposals_can_be_decided_just_before_expiry_and_same_decision_replayed_afterward(): void
+    {
+        $this->travelTo(now()->startOfSecond());
+        $apply = $this->propose(['operation' => 'create_card', 'title' => 'Approved before expiry']);
+        $reject = $this->propose(['operation' => 'create_card', 'title' => 'Rejected before expiry'], 2);
+        $this->travelTo($apply->created_at->copy()->addDays(7)->subSecond());
+        $service = app(WorkspaceProposals::class);
+        $service->apply($this->user, $apply, 'apply');
+        $service->apply($this->user, $reject, 'reject');
+        $applyBefore = $apply->fresh()->getRawOriginal();
+        $rejectBefore = $reject->fresh()->getRawOriginal();
+        $this->travelTo($apply->created_at->copy()->addDays(8));
+        $this->assertSame('applied', $service->apply($this->user, $apply, 'apply')->status);
+        $this->assertSame('rejected', $service->apply($this->user, $reject, 'reject')->status);
+        $this->assertSame($applyBefore, $apply->fresh()->getRawOriginal());
+        $this->assertSame($rejectBefore, $reject->fresh()->getRawOriginal());
+        $this->assertDatabaseCount('board_cards', 1);
+    }
+
+    public function test_serialized_expiry_uses_original_creation_and_event_replay_cannot_extend_it(): void
+    {
+        $this->travelTo(now()->startOfSecond());
+        $payload = ['operation' => 'create_card', 'title' => 'Original proposal'];
+        $proposal = $this->propose($payload);
+        $originalCreated = $proposal->created_at->toISOString();
+        $expectedExpiry = $proposal->created_at->copy()->addDays(7)->toISOString();
+        $this->assertSame($expectedExpiry, $proposal->toArray()['expires_at']);
+        $this->assertSame($originalCreated, $proposal->created_at->toISOString());
+        $this->travelTo($proposal->created_at->copy()->addDays(8));
+        $replay = $this->propose($payload);
+        $this->assertSame($proposal->id, $replay->id);
+        $this->assertSame($originalCreated, $replay->created_at->toISOString());
+        $this->assertSame($expectedExpiry, $replay->toArray()['expires_at']);
+        $this->assertDatabaseCount('workspace_proposals', 1);
+        $this->assertSame('pending', $replay->status);
     }
 }

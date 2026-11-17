@@ -4,9 +4,10 @@ import os
 import json
 from pathlib import Path
 import threading
+from dataclasses import replace
 
 
-def build_tools(reader, emit, host_tool, session_dir, *, session_identity=None):
+def build_tools(reader, emit, host_tool, session_dir, *, session_identity=None, clarifications=None):
     from trading_r1.assembly import build_run_registry, build_tool_registry, builtin_skill_registry
     from trading_r1.runtime.dispatch import dispatch
     from trading_r1.providers.usage import captured, metered
@@ -50,11 +51,19 @@ def build_tools(reader, emit, host_tool, session_dir, *, session_identity=None):
         base = admitted
     registry = build_run_registry(base, builtin_skill_registry(), state, SkillSessionState(),
                                   emit, policy=RunPolicy.SCHEDULED)
+    if clarifications is not None:
+        from trading_r1.tools.core import build_ask_user_spec
+        registry.register(replace(build_ask_user_spec(clarifications), description=(
+            'Ask the user 1–3 short clarifying questions and wait for their answers. '
+            'The server deadline is 300 seconds; expiry returns no answer. '
+            'Clarification is not execution authority.')))
     lock = threading.Lock()
 
     def bind(name):
         def execute(args, context):
             with lock:
+                if clarifications is not None:
+                    clarifications.local.context = context
                 with metered() as meter, captured() as calls:
                     result = asyncio.run(dispatch(name, args, registry=registry, session_state=state,
                                                   call_id=context.tool_call_id, emit=emit))

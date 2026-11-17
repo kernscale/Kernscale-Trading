@@ -16,7 +16,7 @@ class ReconcileResearch extends Command
     public function handle(ResearchCoordinator $service): int
     {
         $failures = 0;
-        ResearchRun::whereIn('status', ['queued', 'dispatching', 'waiting', 'running', 'collecting', 'cancel_requested', 'interrupted'])->eachById(function ($run) use ($service, &$failures) {
+        ResearchRun::whereIn('status', ['queued', 'dispatching', 'waiting', 'waiting_for_input', 'running', 'collecting', 'cancel_requested', 'interrupted'])->eachById(function ($run) use ($service, &$failures) {
             try {
                 if ($run->status === 'queued') {
                     DispatchResearch::dispatch($run->id);

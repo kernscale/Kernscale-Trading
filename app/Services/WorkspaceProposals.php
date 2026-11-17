@@ -100,6 +100,7 @@ class WorkspaceProposals
 
                 return $proposal;
             }
+            abort_if($proposal->expires_at === null || $proposal->expires_at->lessThanOrEqualTo(now()), 409, 'This proposal expired. Request a new proposal.');
             if ($decision === 'apply') {
                 $payload = $proposal->payload;
                 abort_unless($this->validPayload($payload) && $payload['operation'] === $proposal->operation, 422);

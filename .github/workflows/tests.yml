@@ -85,6 +85,7 @@ jobs:
             tests/Feature/DashboardTest.php tests/Feature/ResearchLifecycleTest.php \
             tests/Feature/ResearchDispatchStateTest.php tests/Feature/ResearchSessionManagementTest.php \
             tests/Feature/ResearchActivityTest.php tests/Feature/ResearchArtifactsTest.php tests/Feature/ResearchAttachmentsTest.php \
+            tests/Feature/ResearchClarificationsTest.php \
             tests/Feature/DerivedOutputsTest.php \
             tests/Feature/WorkspaceProposalsTest.php tests/Feature/PublicationTest.php \
             tests/Feature/OutputHistoryTest.php tests/Feature/CommunityOutputLinksTest.php \
@@ -112,5 +113,8 @@ jobs:
           pathlib.Path(os.environ['RUNNER_TEMP'], 'omp-sdk-tests', 'requirements.txt').write_text('\n'.join(requirements) + '\n')
           PY
           "$RUNNER_TEMP/omp-sdk-tests/bin/pip" install --quiet --no-input -r "$RUNNER_TEMP/omp-sdk-tests/requirements.txt"
-          "$RUNNER_TEMP/omp-sdk-tests/bin/python" -c 'from importlib.metadata import version; print({name: version(name) for name in ("omp-rpc", "fastapi", "httpx", "starlette")})'
-          "$RUNNER_TEMP/omp-sdk-tests/bin/python" -B -m unittest bridge.tests.test_research_metrics bridge.tests.test_omp_stream bridge.tests.test_session_paths bridge.tests.test_portfolio bridge.tests.test_bridge bridge.tests.test_attachment_tools bridge.tests.test_http_contract -v
+          "$RUNNER_TEMP/omp-sdk-tests/bin/python" -c 'from importlib.metadata import version; print({name: version(name) for name in ("omp-rpc", "fastapi", "httpx", "starlette", "pydantic")})'
+          "$RUNNER_TEMP/omp-sdk-tests/bin/python" -B -m unittest \
+            bridge.tests.test_research_metrics bridge.tests.test_omp_stream bridge.tests.test_session_paths \
+            bridge.tests.test_portfolio bridge.tests.test_bridge bridge.tests.test_attachment_tools \
+            bridge.tests.test_http_contract bridge.tests.test_clarifications bridge.tests.test_clarification_channel -v

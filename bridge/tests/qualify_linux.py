@@ -122,7 +122,8 @@ def qualify(expected_sha):
         source.mkdir(parents=True, mode=0o755)
         source.parent.chmod(0o755)
         source.chmod(0o755)
-        for name in ('__init__.py', 'executor.py', 'store.py', 'network.py'):
+        for name in ('__init__.py', 'executor.py', 'store.py', 'network.py',
+                     'clarification_channel.py', 'clarifications.py'):
             shutil.copyfile(repository / 'bridge' / name, source / name)
             (source / name).chmod(0o644)
         shutil.copyfile(repository / 'bridge/tests/linux_worker.py', source / 'linux_worker.py')
@@ -149,6 +150,9 @@ def qualify(expected_sha):
         from bridge.store import Store
         require(Path(sys.modules['bridge.executor'].__file__).resolve() == source / 'executor.py')
         require(Path(sys.modules['bridge.network'].__file__).resolve() == source / 'network.py')
+        from bridge import clarification_channel, clarifications
+        require(Path(clarification_channel.__file__).resolve() == source / 'clarification_channel.py')
+        require(Path(clarifications.__file__).resolve() == source / 'clarifications.py')
         store = Store(base / 'state/runs.sqlite')
         executor = IsolatedExecutor(store)
         executor.cgroup_root = group_root
@@ -165,6 +169,7 @@ def qualify(expected_sha):
                 run_id = str(uuid4())
                 body = {'session_id': str(uuid4()), 'prompt': 'synthetic isolation only', 'qualification': {
                     'uid': uid, 'gid': uid, 'credential_scope': number,
+                    'request_id': str(uuid4()),
                     'other_home': str(homes[2 - number]), 'identity_map': str(config)}}
                 store.create(str(number), run_id, body)
                 group = group_root / ('run-' + run_id)
@@ -178,12 +183,22 @@ def qualify(expected_sha):
                 observation = ready()
                 require(all(observation['checks'].values()))
                 receipt['checks'][phase] = observation['checks']
+                require(store.get(str(number), run_id)['status'] == 'waiting_for_input')
+                require(any(event['type'] == 'clarification_requested' and
+                            event['payload']['request_id'] == body['qualification']['request_id']
+                            for event in store.events(str(number), run_id)))
+                receipt['checks'][phase]['waitingForInputPersisted'] = True
                 store.request_cancel(str(number), run_id)
                 executor.cancel(run_id)
                 require(wait_for(lambda: not (group / 'cgroup.procs').read_text().strip() and dead(observation['child_pid'])))
                 thread.join(8)
                 require(not thread.is_alive())
                 require(store.get(str(number), run_id)['status'] == 'cancelled')
+                require(any(event['type'] == 'clarification_closed' and
+                            event['payload']['request_id'] == body['qualification']['request_id'] and
+                            event['payload']['status'] == 'cancelled'
+                            for event in store.events(str(number), run_id)))
+                receipt['checks'][phase]['pendingQuestionCancelled'] = True
                 receipt['checks'][phase]['cgroupEmptyAndDescendantDead'] = True
                 receipt['checks'][phase]['executorConfirmedCancelled'] = True
         receipt['qualified'] = True
