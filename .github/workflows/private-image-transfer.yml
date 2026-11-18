@@ -1,0 +1,57 @@
+name: Transfer reviewed private OCI image
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  export:
+    if: github.repository == 'kernscale/Kernscale-Trading' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Verify private owning repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/kernscale/Kernscale-Trading --jq '.private == true and .full_name == "kernscale/Kernscale-Trading"')" = true
+      - name: Check out transfer verifier
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Test transfer verifier
+        run: python3 -m unittest discover -s deploy/tests -p test_oci_transfer.py
+      - name: Install Skopeo
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends skopeo
+      - name: Export exact reviewed graph without credentials
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_ACTOR: ${{ github.actor }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          auth_dir="$(mktemp -d "$RUNNER_TEMP/oci-auth.XXXXXX")"
+          layout_dir="$(mktemp -d "$RUNNER_TEMP/oci-layout.XXXXXX")"
+          trap 'rm -rf "$auth_dir" "$layout_dir"' EXIT
+          printf '%s' "$GH_TOKEN" | skopeo login --authfile "$auth_dir/auth.json" --username "$GH_ACTOR" --password-stdin ghcr.io >/dev/null
+          skopeo copy --src-authfile "$auth_dir/auth.json" --all --preserve-digests \
+            --digestfile "$auth_dir/exported.digest" \
+            docker://ghcr.io/kernscale/kernscale-trading@sha256:160bdcbd2bad1e4f025ad4bc5cd49dec763ab2976af14848fbc2e4a381fe7a62 \
+            "oci:$layout_dir:candidate"
+          test "$(cat "$auth_dir/exported.digest")" = sha256:160bdcbd2bad1e4f025ad4bc5cd49dec763ab2976af14848fbc2e4a381fe7a62
+          python3 deploy/oci_transfer.py "$layout_dir" transfer
+      - name: Upload private transfer archive and verification receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trading-private-image-transfer
+          path: |
+            transfer/image.oci.tar
+            transfer/receipt.json
+            transfer/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 1
