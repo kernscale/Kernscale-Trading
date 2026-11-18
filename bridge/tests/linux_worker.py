@@ -17,6 +17,10 @@ def main():
     # The actual executor writes stdin only after placing this process in its cgroup.
     request = json.loads(sys.stdin.readline())
     fixture = request['qualification']
+    with open('/proc/self/status') as source:
+        status = dict(line.split(':', 1) for line in source.read().splitlines() if ':' in line)
+    credentials = {key: int(status[key].strip(), 16) for key in ('CapEff', 'CapPrm', 'CapAmb')}
+    credentials['NoNewPrivs'] = int(status['NoNewPrivs'].strip())
     home = os.environ['HOME']
     mask = os.umask(0o077)
     os.umask(mask)
@@ -45,7 +49,7 @@ def main():
         'questions': [{'id': '0', 'header': 'Research', 'question': 'Which scope?',
                        'options': [{'label': 'Global', 'description': ''},
                                    {'label': 'Regional', 'description': ''}]}]}}), flush=True)
-    print(json.dumps({'type': 'fixture_ready', 'payload': {'checks': checks, 'child_pid': child}}), flush=True)
+    print(json.dumps({'type': 'fixture_ready', 'payload': {'checks': checks, 'child_pid': child, 'child_credentials': credentials}}), flush=True)
     while True:
         signal.pause()
 

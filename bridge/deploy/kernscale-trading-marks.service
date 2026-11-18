@@ -1,0 +1,40 @@
+# Agents2 admission template. Retains the native interpreter, not its retired UI service.
+[Unit]
+Description=Private native paper portfolio mark receipt
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=jonas
+Group=jonas
+WorkingDirectory=/opt/kernscale/trading
+EnvironmentFile=/etc/kernscale-trading/marks.env
+Environment=PYTHONPATH=/opt/kernscale/trading
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONNOUSERSITE=1
+Environment=HOME=/var/lib/kernscale-trading-marks
+Environment=XDG_CACHE_HOME=/var/lib/kernscale-trading-marks/cache
+ExecStart=/home/jonas/repositories/products/TradingAgents/.venv-paper-ui/bin/python -B -P -m bridge.marks
+StateDirectory=kernscale-trading-marks
+StateDirectoryMode=0700
+UMask=0077
+TimeoutStartSec=90s
+TimeoutStopSec=15s
+KillMode=control-group
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=tmpfs
+BindReadOnlyPaths=/home/jonas/repositories/products/Trading-CLI
+BindReadOnlyPaths=/home/jonas/repositories/products/TradingAgents/.venv-paper-ui
+BindReadOnlyPaths=/home/jonas/.local/share/uv/python/cpython-3.13.13-linux-x86_64-gnu
+BindReadOnlyPaths=/home/jonas/.local/share/tradingagents-paper
+ReadWritePaths=/var/lib/kernscale-trading-marks
+InaccessiblePaths=/etc/kernscale-trading /root
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+

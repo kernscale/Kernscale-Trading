@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh private native portfolio marks approximately every two minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=2min
+AccuracySec=10s
+Unit=kernscale-trading-marks.service
+
+[Install]
+WantedBy=timers.target

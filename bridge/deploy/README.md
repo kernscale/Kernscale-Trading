@@ -48,7 +48,16 @@ helper does not silently chmod operator files. Errors produce only fixed safe
 reason codes, never database rows, prompts, credentials, or raw exceptions.
 
 ProtectHome, ProtectSystem, NoNewPrivileges and the coordinator capability bounds
-are retained. Literal private listener/proxy admission and native read-only bind
+are retained. The coordinator carries ambient CAP_SETUID, already present in its
+unchanged bounding set: target A/B qualification showed explicit systemd root
+identity setup otherwise retained only DAC_OVERRIDE/SETGID effective capabilities,
+causing UID-drop Popen to fail with EPERM. This is a coordinator launch requirement,
+not permission for research workers to retain root capabilities. Target worker
+receipts must show NoNewPrivs=1 and zero permitted/effective/ambient capabilities
+after exec. Inheritable bits alone are not required to be zero; with no permitted
+capabilities and NoNewPrivs, they do not attest a capability gain. Actual descendant
+fencing and target confinement still require separate observations.
+Literal private listener/proxy admission and native read-only bind
 mounts remain operator overlay responsibilities. Actual root/cgroup/systemd
 acceptance must be performed on the target; offline tests use fake cgroup files
 and test the real Store only in a temporary private SQLite directory:

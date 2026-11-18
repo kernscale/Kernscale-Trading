@@ -20,6 +20,8 @@ class HostLifecycleTests(unittest.TestCase):
         unit = (directory / 'kernscale-trading-bridge.service').read_text()
         self.assertIn('Requires=kernscale-trading-cgroup.service', unit)
         self.assertIn('ExecStopPost=/opt/kernscale/trading/venv/bin/python -m bridge.deploy.lifecycle stop', unit)
+        self.assertIn('AmbientCapabilities=CAP_SETUID', unit)
+        self.assertIn('CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_DAC_OVERRIDE', unit)
         for guard in ('ProtectSystem=strict', 'ProtectHome=true', 'NoNewPrivileges=true', 'KillMode=control-group'):
             self.assertIn(guard, unit)
         bootstrap = (directory / 'kernscale-trading-cgroup.service').read_text()
