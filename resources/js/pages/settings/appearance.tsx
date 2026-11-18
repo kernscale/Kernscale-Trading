@@ -1,5 +1,6 @@
 import { Head } from '@inertiajs/react';
-import Heading from '@/components/heading';
+import { Moon } from 'lucide-react';
+import { StatusMark } from '@/components/kit/micro';
 import { edit as editAppearance } from '@/routes/appearance';
 
 export default function Appearance() {
@@ -9,19 +10,17 @@ export default function Appearance() {
 
             <h1 className="sr-only">Appearance settings</h1>
 
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title="Appearance settings"
-                    description="Trading workspace appearance"
-                />
-                <div className="rounded-lg border border-border bg-card p-4">
-                    <p className="text-sm font-medium">Dark workspace</p>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                        Trading uses a consistent dark theme for research,
-                        reports and account settings.
-                    </p>
-                </div>
+            <div className="flex items-center gap-4 rounded-xl border border-[var(--kit-line)] p-4">
+                <span className="flex size-10 items-center justify-center rounded-lg border border-[var(--kit-line)] bg-[#0b0b0d]">
+                    <Moon className="size-4" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                    <span className="block text-[14px] font-medium">Dark</span>
+                    <span className="block text-[12.5px] text-[var(--kit-faint)]">
+                        Used across the whole workspace
+                    </span>
+                </span>
+                <StatusMark status="active" />
             </div>
         </>
     );

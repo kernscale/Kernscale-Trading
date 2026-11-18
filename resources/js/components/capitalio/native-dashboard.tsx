@@ -11,6 +11,7 @@ import {
     nativePortfolio,
     selectedPeriod,
 } from '@/components/capitalio/native-data';
+import { StatusMark } from '@/components/kit/micro';
 import type { PortfolioSnapshot } from '@/types/hub';
 export default function NativeDashboard({
     snapshot,
@@ -30,12 +31,22 @@ export default function NativeDashboard({
                 <HoldingsTable data={data} />
                 <SmartInsightsPanel />
             </div>
-            <p className="text-xs leading-5 text-muted-foreground">
-                Source: {data.snapshot?.source ?? 'Unavailable'} · Observed:{' '}
-                {data.snapshot?.observed_at ?? 'Unavailable'} · {period.label}{' '}
-                selects up to {period.days} days of available observations.
-                History is not backfilled.
-            </p>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--kit-faint)]">
+                <span className="kit-pill">
+                    <StatusMark
+                        status={data.snapshot ? 'available' : 'idle'}
+                        size={11}
+                    />
+                    {data.snapshot?.source ?? 'No source connected'}
+                </span>
+                <span className="kit-pill">
+                    Observed {data.snapshot?.observed_at ?? '—'}
+                </span>
+                <span className="kit-pill">
+                    {period.label} · up to {period.days} days
+                </span>
+                <span>History is not backfilled.</span>
+            </div>
         </section>
     );
 }

@@ -17,9 +17,9 @@ import {
     NativeDonut,
     NativeLegend,
     NativeLine,
-    Unavailable,
 } from '@/components/capitalio/native-charts';
 import { usd, type NativePortfolio } from '@/components/capitalio/native-data';
+import { Quiet, StatusMark } from '@/components/kit/micro';
 export function PerformancePanel({
     data,
     analytics = false,
@@ -72,29 +72,39 @@ export function PerformancePanel({
                     </div>
                 ))}
             </div>
-            <p className="text-xs leading-5 text-muted-foreground">
+            <p className="text-xs leading-5 text-[var(--kit-faint)]">
                 {data.snapshot?.history_provenance ??
                     'No verified observed-equity history is available.'}{' '}
                 Funding changes affect equity; this is not investment return.
                 Benchmarks are unavailable.
             </p>
             {!analytics && (
-                <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
-                    {['Stocks', 'Real estate', 'Crypto', 'Fixed Income'].map(
-                        (label) => (
-                            <div key={label} className="space-y-2">
-                                <div className="text-sm font-medium text-muted-foreground">
-                                    {label}
-                                </div>
-                                <div className="text-2xl leading-none font-medium">
-                                    Unavailable
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                    No native class-return series
-                                </div>
+                <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+                    {[
+                        { label: 'Stocks', color: 'var(--chart-1)' },
+                        { label: 'Real estate', color: 'var(--chart-2)' },
+                        { label: 'Crypto', color: 'var(--chart-3)' },
+                        { label: 'Fixed Income', color: 'var(--chart-4)' },
+                    ].map((item) => (
+                        <div
+                            key={item.label}
+                            className="rounded-xl border border-[var(--kit-line)] bg-[var(--kit-surface)] px-3.5 py-3"
+                        >
+                            <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                                <ChartMarker
+                                    color={item.color}
+                                    className="size-2.5"
+                                />
+                                {item.label}
                             </div>
-                        ),
-                    )}
+                            <div className="mt-2.5 text-xl leading-none font-medium text-[var(--kit-faint)]">
+                                —
+                            </div>
+                            <div className="mt-1.5 text-[11.5px] text-[var(--kit-faint)]">
+                                No class-return series
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )}
         </DashboardCard>
@@ -275,10 +285,19 @@ export function HoldingsTable({ data }: { data: NativePortfolio }) {
                     </p>
                 </>
             ) : (
-                <Unavailable className="min-h-52">
-                    Native holdings unavailable. No sample holdings, logos,
-                    returns or daily changes are substituted.
-                </Unavailable>
+                <div className="flex flex-col gap-3">
+                    <div className="hidden grid-cols-12 items-center rounded-lg border border-border bg-foreground/5 px-4 py-3 text-sm font-medium text-foreground/50 md:grid">
+                        <div className="col-span-1">No</div>
+                        <div className="col-span-5">Asset</div>
+                        <div className="col-span-2">Value</div>
+                        <div className="col-span-2">Allocation</div>
+                        <div className="col-span-2">Return</div>
+                    </div>
+                    <Quiet className="justify-center py-8 text-center">
+                        No verified holdings snapshot yet. Sample holdings,
+                        logos, returns and daily changes are never substituted.
+                    </Quiet>
+                </div>
             )}
         </DashboardCard>
     );
@@ -286,20 +305,19 @@ export function HoldingsTable({ data }: { data: NativePortfolio }) {
 const insights = [
     {
         title: 'Rebalance opportunity',
-        description:
-            'Unavailable — no validated target allocation or rebalance proposal.',
+        description: 'Needs a validated target allocation.',
         action: 'Rebalance Now',
         icon: Dashboard3dScaleIcon,
     },
     {
         title: 'Tax-loss harvesting',
-        description: 'Unavailable — no qualified native tax-lot dataset.',
+        description: 'Needs a qualified native tax-lot dataset.',
         action: 'Review',
         icon: DashboardTaxesIcon,
     },
     {
         title: 'Dividend reinvestment',
-        description: 'Unavailable — no verified dividend or DRIP integration.',
+        description: 'Needs a verified dividend or DRIP feed.',
         action: 'Enable DRIP',
         icon: DashboardReloadHorizontalIcon,
     },
@@ -310,39 +328,33 @@ export function SmartInsightsPanel() {
             <DetailHeader title="Smart Insights">
                 <DetailTag>Unavailable</DetailTag>
             </DetailHeader>
-            <div className="flex flex-col gap-6">
-                {insights.map((item, index) => (
-                    <div
+            <ul className="flex flex-col gap-1">
+                {insights.map((item) => (
+                    <li
                         key={item.title}
-                        className={`flex gap-3 ${index ? 'border-t border-border pt-6' : ''}`}
+                        className="flex items-center gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-[var(--kit-surface)]"
                     >
-                        <div className="dashboard-icon-badge flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg p-1.5 text-white">
+                        <div className="dashboard-icon-badge flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg p-1.5 text-white">
                             <item.icon className="size-5 text-white" />
                         </div>
                         <div className="min-w-0 flex-1">
-                            <div className="leading-tight font-medium">
+                            <div className="truncate text-[14px] leading-tight font-medium">
                                 {item.title}
                             </div>
-                            <div className="mt-2 text-sm leading-snug text-muted-foreground">
+                            <div className="mt-1 text-[12.5px] leading-snug text-muted-foreground">
                                 {item.description}
                             </div>
-                            <div className="mt-3 flex justify-end">
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    size="sm"
-                                    disabled
-                                >
-                                    <span className="truncate">
-                                        {item.action}
-                                    </span>
-                                    <ArrowRight className="size-4 shrink-0" />
-                                </Button>
-                            </div>
                         </div>
-                    </div>
+                        <span
+                            className="kit-pill shrink-0"
+                            title={`${item.action} becomes available once the data is connected`}
+                        >
+                            <StatusMark status="idle" size={11} />
+                            Needs data
+                        </span>
+                    </li>
                 ))}
-            </div>
+            </ul>
         </DashboardCard>
     );
 }

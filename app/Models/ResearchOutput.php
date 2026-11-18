@@ -32,7 +32,7 @@ class ResearchOutput extends Model
     /** @return BelongsTo<User, $this> */
     public function author(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id')->select('id', 'name');
+        return $this->belongsTo(User::class, 'user_id')->select('id', 'name', 'avatar_path');
     }
 
     /**

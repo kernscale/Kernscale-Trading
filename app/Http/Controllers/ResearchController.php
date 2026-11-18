@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BoardCard;
+use App\Models\ResearchAttachment;
 use App\Models\ResearchOutput;
 use App\Models\ResearchRun;
 use App\Models\ResearchSession;
@@ -14,6 +15,8 @@ use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -106,6 +109,34 @@ class ResearchController extends Controller
         $data = $request->validate(['version' => 'required|integer|min:1', 'title' => 'sometimes|string|max:160', 'content' => 'sometimes|string', 'status' => ['sometimes', Rule::in(['backlog', 'researching', 'review', 'done'])]]);
         $count = BoardCard::whereKey($card->id)->where('version', $data['version'])->update([...array_diff_key($data, ['version' => true]), 'version' => $data['version'] + 1, 'updated_at' => now()]);
         abort_unless($count === 1, 409, 'This card was updated elsewhere. Refresh before editing.');
+
+        return back();
+    }
+
+    /** Deletes an empty session; sessions with runs or saved outputs keep their research history. */
+    public function destroy(Request $request, ResearchSession $session, ResearchCoordinator $service): RedirectResponse
+    {
+        $service->authorize($request->user(), $session);
+        abort_if($session->runs()->exists() || ResearchOutput::where('research_session_id', $session->id)->exists(), 409, 'Sessions with research runs or saved outputs are kept.');
+        $keys = ResearchAttachment::where('research_session_id', $session->id)->pluck('storage_key')->all();
+        DB::transaction(function () use ($session) {
+            ResearchAttachment::where('research_session_id', $session->id)->delete();
+            $session->proposals()->delete();
+            $session->board()->delete();
+            $session->messages()->delete();
+            $session->delete();
+        });
+        Storage::disk('local')->delete($keys);
+
+        return redirect('/research');
+    }
+
+    public function destroyCard(Request $request, ResearchSession $session, BoardCard $card, ResearchCoordinator $service): RedirectResponse
+    {
+        $service->authorize($request->user(), $session);
+        abort_unless($card->research_session_id === $session->id, 404);
+        $data = $request->validate(['version' => 'required|integer|min:1']);
+        abort_unless(BoardCard::whereKey($card->id)->where('version', $data['version'])->delete() === 1, 409, 'This card was updated elsewhere. Refresh before deleting.');
 
         return back();
     }

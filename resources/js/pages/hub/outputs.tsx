@@ -1,21 +1,43 @@
-import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import {
-    Empty,
-    DataTable,
-    Errors,
-    PageHeading,
-    Panel,
-    Status,
-} from '@/components/hub/shared';
-import {
-    Item,
-    ItemContent,
-    ItemTitle,
-    ItemActions,
-} from '@/components/ui/item';
-import Markdown from '@/components/hub/markdown';
+    CalendarClock,
+    FileText,
+    Lightbulb,
+    NotebookPen,
+    Plus,
+    Search,
+    X,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
+import OutputDetail from '@/components/hub/output-detail';
+import { displayValue, Errors } from '@/components/hub/shared';
+import { Composer } from '@/components/kit/composer';
+import { Quiet, Segment, StatusMark } from '@/components/kit/micro';
 import type { Output, RecordData } from '@/types/hub';
+
+type Filter = 'all' | 'draft' | 'review' | 'published';
+const matches = (output: Output, filter: Filter) =>
+    filter === 'all' ||
+    (filter === 'draft' &&
+        ['draft', 'changes_requested'].includes(output.status)) ||
+    (filter === 'review' && output.status === 'in_review') ||
+    (filter === 'published' && output.status === 'published');
+const kindIcon = (kind: string) =>
+    kind === 'strategy'
+        ? Lightbulb
+        : kind === 'document'
+          ? FileText
+          : NotebookPen;
+const shortDate = (value: unknown) => {
+    const time = typeof value === 'string' ? Date.parse(value) : Number.NaN;
+    return Number.isNaN(time)
+        ? displayValue(value)
+        : new Date(time).toLocaleDateString(undefined, {
+              month: 'short',
+              day: 'numeric',
+          });
+};
+
 export default function Outputs({
     outputs = [],
     runs = [],
@@ -23,324 +45,270 @@ export default function Outputs({
     outputs?: Output[];
     runs?: RecordData[];
 }) {
-    const [selected, setSelected] = useState<Output | null>(null);
+    const [selectedId, setSelectedId] = useState<Output['id'] | null>(null);
+    const [filter, setFilter] = useState<Filter>('all');
+    const [query, setQuery] = useState('');
+    const [composing, setComposing] = useState(false);
     const form = useForm({ title: '', kind: 'research', content: '' });
-    const edit = useForm({ title: '', content: '', version: 1 });
-    const review = useForm({ decision: 'publish', comment: '' });
     const auth = usePage().props.auth as {
         roles?: string[];
         user?: { id?: number; roles?: (string | { name: string })[] };
     };
-    const owner = [
+    const roles = [
         ...(auth.roles ?? []),
         ...(auth.user?.roles ?? []).map((r) =>
             typeof r === 'string' ? r : r.name,
         ),
-    ].includes('owner');
-    const canResearch = [
-        ...(auth.roles ?? []),
-        ...(auth.user?.roles ?? []).map((r) =>
-            typeof r === 'string' ? r : r.name,
-        ),
-    ].some((role) => ['researcher', 'owner'].includes(role));
+    ];
+    const owner = roles.includes('owner');
+    const canResearch = roles.some((role) =>
+        ['researcher', 'owner'].includes(role),
+    );
+    const selected = outputs.find((output) => output.id === selectedId) ?? null;
+    const visible = useMemo(
+        () =>
+            outputs.filter(
+                (output) =>
+                    matches(output, filter) &&
+                    output.title.toLowerCase().includes(query.toLowerCase()),
+            ),
+        [outputs, filter, query],
+    );
+    const count = (value: Filter) =>
+        outputs.filter((output) => matches(output, value)).length;
+
     return (
         <>
             <Head title="Agent outputs" />
-            <PageHeading
-                eyebrow="Evidence, documents & strategies"
-                title="Agent outputs"
-            />
-            <Panel
-                title="Scheduled-run receipts"
-                note="Observed native scheduler records"
-                className="mb-5"
-            >
-                <p className="mb-4 text-xs leading-6 text-muted-foreground">
-                    Run status and report availability are separate. A failed or
-                    interrupted receipt never becomes a completed research
-                    document.
-                </p>
-                <DataTable
-                    rows={runs.map((run) => ({
-                        title: run.title,
-                        symbol: run.symbol,
-                        created_at: run.created_at,
-                        status: run.status,
-                        reason: run.reason,
-                        report:
-                            run.has_report === true
-                                ? 'Available'
-                                : 'No report artifact',
-                    }))}
-                    empty="No scheduled-run receipts available"
+            {canResearch && composing && (
+                <form
+                    className="mx-auto mb-8 max-w-3xl space-y-3"
+                    onSubmit={(e) => e.preventDefault()}
+                >
+                    <div className="flex flex-wrap items-center gap-3">
+                        <input
+                            required
+                            aria-label="Title"
+                            placeholder="Untitled output"
+                            className="min-w-0 flex-1 bg-transparent text-xl font-medium outline-none placeholder:text-[var(--kit-faint)]"
+                            value={form.data.title}
+                            onChange={(e) =>
+                                form.setData('title', e.target.value)
+                            }
+                        />
+                        <Segment
+                            label="Type"
+                            value={form.data.kind}
+                            onChange={(value) => form.setData('kind', value)}
+                            options={[
+                                { value: 'research', label: 'Research' },
+                                { value: 'strategy', label: 'Strategy' },
+                                { value: 'document', label: 'Document' },
+                            ]}
+                        />
+                    </div>
+                    <Composer
+                        label="Content"
+                        sendLabel="Save draft"
+                        rows={6}
+                        submitOnEnter={false}
+                        value={form.data.content}
+                        onChange={(value) => form.setData('content', value)}
+                        processing={form.processing || !form.data.title.trim()}
+                        placeholder="Thesis, evidence, risks…"
+                        onSubmit={() =>
+                            form.post('/outputs', {
+                                onSuccess: () => {
+                                    form.reset();
+                                    setComposing(false);
+                                },
+                            })
+                        }
+                    />
+                    <Errors errors={form.errors} />
+                </form>
+            )}
+
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+                <Segment
+                    label="Filter outputs"
+                    value={filter}
+                    onChange={setFilter}
+                    options={[
+                        { value: 'all', label: 'All', count: count('all') },
+                        {
+                            value: 'draft',
+                            label: 'Drafts',
+                            count: count('draft'),
+                        },
+                        {
+                            value: 'review',
+                            label: 'In review',
+                            count: count('review'),
+                        },
+                        {
+                            value: 'published',
+                            label: 'Published',
+                            count: count('published'),
+                        },
+                    ]}
                 />
-            </Panel>
-            <div className="grid gap-5 xl:grid-cols-[1.35fr_1fr]">
-                <Panel title="Your library" note={`${outputs.length} outputs`}>
-                    {outputs.length ? (
-                        <div className="space-y-2">
-                            {outputs.map((output) => (
-                                <button
-                                    onClick={() => {
-                                        setSelected(output);
-                                        edit.setData({
-                                            title: output.title,
-                                            content: output.content,
-                                            version: output.version ?? 1,
-                                        });
-                                    }}
-                                    key={output.id}
-                                    className="flex w-full items-center gap-4 rounded-lg border border-white/5 p-4 text-left hover:bg-white/5"
-                                >
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-sm font-medium">
-                                            {output.title}
-                                        </p>
-                                        <p className="mt-2 text-xs text-muted-foreground">
-                                            {output.kind} ·{' '}
-                                            {output.author?.name ?? 'Research'}
-                                        </p>
-                                    </div>
-                                    <Status>{output.status}</Status>
-                                </button>
-                            ))}
-                        </div>
-                    ) : (
-                        <Empty title="Your research library starts here">
-                            Create a document or strategy proposal. Submit it
-                            for review before sharing with the community.
-                        </Empty>
-                    )}
-                </Panel>
+                <label className="relative ml-auto min-w-0 flex-1 sm:w-56 sm:flex-none">
+                    <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-[var(--kit-faint)]" />
+                    <input
+                        aria-label="Search outputs"
+                        placeholder="Search"
+                        className="hub-input !h-9 !py-0 !pl-8 !text-[13px]"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                    />
+                </label>
                 {canResearch && (
-                    <Panel title="Create an output">
-                        <form
-                            className="space-y-4"
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                form.post('/outputs', {
-                                    onSuccess: () => form.reset(),
-                                });
-                            }}
-                        >
-                            <label className="block text-xs">
-                                Title
-                                <input
-                                    required
-                                    className="hub-input mt-2"
-                                    value={form.data.title}
-                                    onChange={(e) =>
-                                        form.setData('title', e.target.value)
-                                    }
-                                />
-                            </label>
-                            <label className="block text-xs">
-                                Type
-                                <select
-                                    className="hub-input mt-2"
-                                    value={form.data.kind}
-                                    onChange={(e) =>
-                                        form.setData('kind', e.target.value)
-                                    }
-                                >
-                                    <option value="research">Research</option>
-                                    <option value="strategy">
-                                        Strategy proposal
-                                    </option>
-                                    <option value="document">Document</option>
-                                </select>
-                            </label>
-                            <label className="block text-xs">
-                                Content
-                                <textarea
-                                    required
-                                    rows={7}
-                                    className="hub-input mt-2"
-                                    value={form.data.content}
-                                    onChange={(e) =>
-                                        form.setData('content', e.target.value)
-                                    }
-                                />
-                            </label>
-                            <Errors errors={form.errors} />
-                            <button
-                                className="hub-button primary"
-                                disabled={form.processing}
-                            >
-                                Save draft
-                            </button>
-                        </form>
-                    </Panel>
-                )}
-                {selected && (
-                    <Panel
-                        title={selected.title}
-                        note={selected.status}
-                        className="xl:col-span-2"
+                    <button
+                        type="button"
+                        className="hub-button primary !min-h-9"
+                        onClick={() => setComposing((value) => !value)}
+                        aria-expanded={composing}
                     >
-                        <div className="mb-6 text-muted-foreground">
-                            <Markdown>{selected.content}</Markdown>
-                        </div>
-                        {selected.user_id === auth.user?.id &&
-                            ['draft', 'changes_requested'].includes(
-                                selected.status,
-                            ) &&
-                            !selected.external_id && (
-                                <form
-                                    className="mb-5 space-y-3"
-                                    onSubmit={(e) => {
-                                        e.preventDefault();
-                                        edit.patch(`/outputs/${selected.id}`, {
-                                            onSuccess: () => setSelected(null),
-                                        });
-                                    }}
-                                >
-                                    <label className="block text-xs">
-                                        Title
-                                        <input
-                                            required
-                                            className="hub-input mt-2"
-                                            value={edit.data.title}
-                                            onChange={(e) =>
-                                                edit.setData(
-                                                    'title',
-                                                    e.target.value,
-                                                )
-                                            }
-                                        />
-                                    </label>
-                                    <label className="block text-xs">
-                                        Revise draft
-                                        <textarea
-                                            required
-                                            rows={7}
-                                            className="hub-input mt-2"
-                                            value={edit.data.content}
-                                            onChange={(e) =>
-                                                edit.setData(
-                                                    'content',
-                                                    e.target.value,
-                                                )
-                                            }
-                                        />
-                                    </label>
-                                    <Errors errors={edit.errors} />
-                                    <button
-                                        disabled={edit.processing}
-                                        className="hub-button"
-                                    >
-                                        Save revision
-                                    </button>
-                                </form>
-                            )}
-                        {selected.review_comment && (
-                            <p className="mb-4 text-sm text-amber-200">
-                                Review: {selected.review_comment}
-                            </p>
+                        {composing ? (
+                            <X className="size-4" />
+                        ) : (
+                            <Plus className="size-4" />
                         )}
-                        {selected.sources?.map((source) => (
-                            <a
-                                key={source.url}
-                                className="hub-link mr-4 mb-3"
-                                href={
-                                    /^https?:\/\//i.test(source.url)
-                                        ? source.url
-                                        : undefined
-                                }
-                                target="_blank"
-                                rel="noreferrer"
-                            >
-                                {source.title ?? source.url}
-                            </a>
-                        ))}
-                        {selected.user_id === auth.user?.id &&
-                            ['draft', 'changes_requested'].includes(
-                                selected.status,
-                            ) && (
-                                <button
-                                    className="hub-button"
-                                    onClick={() =>
-                                        router.post(
-                                            `/outputs/${selected.id}/submit`,
-                                            {},
-                                            {
-                                                onSuccess: () =>
-                                                    setSelected(null),
-                                            },
-                                        )
-                                    }
-                                >
-                                    Submit for owner review
-                                </button>
-                            )}
-                        {owner && ['in_review'].includes(selected.status) && (
-                            <form
-                                className="mt-4 space-y-3"
-                                onSubmit={(e) => {
-                                    e.preventDefault();
-                                    review.post(
-                                        `/outputs/${selected.id}/review`,
-                                        { onSuccess: () => setSelected(null) },
-                                    );
-                                }}
-                            >
-                                <Item variant="outline" size="sm">
-                                    <ItemContent>
-                                        <ItemTitle>
-                                            Confirm publication review
-                                        </ItemTitle>
-                                        <p className="mb-3 text-xs text-muted-foreground">
-                                            Publish shares this output with
-                                            approved members. Request changes
-                                            keeps it in the review workflow.
-                                        </p>
-                                        <label className="block text-xs">
-                                            Review feedback
-                                            <textarea
-                                                className="hub-input mt-2"
-                                                value={review.data.comment}
-                                                onChange={(e) =>
-                                                    review.setData(
-                                                        'comment',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                        </label>
-                                        <select
-                                            aria-label="Review decision"
-                                            className="hub-input"
-                                            value={review.data.decision}
-                                            onChange={(e) =>
-                                                review.setData(
-                                                    'decision',
-                                                    e.target.value,
-                                                )
-                                            }
-                                        >
-                                            <option value="publish">
-                                                Publish
-                                            </option>
-                                            <option value="changes_requested">
-                                                Request changes
-                                            </option>
-                                        </select>
-                                        <Errors errors={review.errors} />
-                                    </ItemContent>
-                                    <ItemActions>
-                                        <button
-                                            className="hub-button primary"
-                                            disabled={review.processing}
-                                        >
-                                            Confirm review
-                                        </button>
-                                    </ItemActions>
-                                </Item>
-                            </form>
-                        )}
-                    </Panel>
+                        {composing ? 'Close' : 'New'}
+                    </button>
                 )}
             </div>
+
+            <div
+                className={`grid items-start gap-4 ${selected ? 'xl:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]' : ''}`}
+            >
+                <section
+                    aria-label="Your library"
+                    className={`rounded-2xl border border-[var(--kit-line)] bg-[var(--kit-surface)] p-1.5 ${selected ? 'max-xl:hidden' : ''}`}
+                >
+                    {visible.length ? (
+                        <ul
+                            className={
+                                selected ? '' : 'grid gap-0.5 md:grid-cols-2'
+                            }
+                        >
+                            {visible.map((output) => {
+                                const Icon = kindIcon(output.kind);
+                                return (
+                                    <li key={output.id}>
+                                        <button
+                                            type="button"
+                                            className="kit-row"
+                                            aria-current={
+                                                output.id === selectedId
+                                            }
+                                            onClick={() =>
+                                                setSelectedId(output.id)
+                                            }
+                                        >
+                                            <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-[var(--kit-line)] bg-[var(--background)]">
+                                                <Icon className="size-4 text-[var(--kit-soft)]" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block truncate text-[14px] font-medium">
+                                                    {output.title}
+                                                </span>
+                                                <span className="mt-0.5 block truncate text-[12px] text-[var(--kit-faint)] capitalize">
+                                                    {output.kind} ·{' '}
+                                                    {output.author?.name ??
+                                                        'Research'}{' '}
+                                                    ·{' '}
+                                                    {shortDate(
+                                                        output.created_at,
+                                                    )}
+                                                </span>
+                                            </span>
+                                            <StatusMark
+                                                status={output.status}
+                                                label={output.status.replaceAll(
+                                                    '_',
+                                                    ' ',
+                                                )}
+                                                className="capitalize max-sm:[&>span]:hidden"
+                                            />
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    ) : (
+                        <p className="px-4 py-10 text-center text-[13px] text-[var(--kit-faint)]">
+                            {outputs.length ? 'No matches' : 'No outputs yet'}
+                        </p>
+                    )}
+                </section>
+                {selected && (
+                    <section className="min-w-0 rounded-2xl border border-[var(--kit-line)] bg-[var(--background)]">
+                        <OutputDetail
+                            key={selected.id}
+                            output={selected}
+                            userId={auth.user?.id}
+                            owner={owner}
+                            onClose={() => setSelectedId(null)}
+                        />
+                    </section>
+                )}
+            </div>
+
+            <section className="mt-8" aria-labelledby="receipts-title">
+                <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                    <h2
+                        id="receipts-title"
+                        className="flex items-center gap-2 text-[15px] font-medium"
+                    >
+                        <CalendarClock className="size-4 text-[var(--kit-faint)]" />
+                        Scheduled runs
+                    </h2>
+                </div>
+                {runs.length ? (
+                    <ul className="divide-y divide-[var(--kit-line)] rounded-2xl border border-[var(--kit-line)]">
+                        {runs.map((run, index) => (
+                            <li
+                                key={displayValue(run.id, String(index))}
+                                className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3"
+                            >
+                                <span
+                                    title={displayValue(run.status).replaceAll(
+                                        '_',
+                                        ' ',
+                                    )}
+                                >
+                                    <StatusMark
+                                        status={displayValue(run.status, '')}
+                                    />
+                                </span>
+                                <span className="min-w-0 flex-1 truncate text-[14px]">
+                                    {displayValue(run.title, 'Scheduled run')}
+                                    {typeof run.symbol === 'string' && (
+                                        <span className="ml-2 font-mono text-[12px] text-[var(--kit-faint)]">
+                                            {run.symbol}
+                                        </span>
+                                    )}
+                                </span>
+                                {typeof run.reason === 'string' && (
+                                    <span className="w-full truncate text-[12px] text-[var(--kit-faint)] sm:order-last sm:pl-[22px]">
+                                        {run.reason}
+                                    </span>
+                                )}
+                                {run.has_report === true && (
+                                    <span className="kit-pill">Report</span>
+                                )}
+                                <span className="w-14 text-right text-[12px] text-[var(--kit-faint)] tabular-nums">
+                                    {shortDate(run.created_at)}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <Quiet>None yet</Quiet>
+                )}
+            </section>
         </>
     );
 }

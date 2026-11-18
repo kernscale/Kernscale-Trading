@@ -3,6 +3,7 @@ export const activeRunStates = [
     'queued',
     'running',
     'waiting',
+    'waiting_for_input',
     'pending',
     'dispatching',
     'cancel_requested',
@@ -72,9 +73,9 @@ export function evidenceSources(events: ResearchEvent[]) {
 }
 
 export function runStatusLabel(status: string) {
-    return status === 'collecting'
-        ? 'Collecting results'
-        : status.replaceAll('_', ' ');
+    if (status === 'collecting') return 'Collecting results';
+    if (status === 'waiting_for_input') return 'Needs your input';
+    return status.replaceAll('_', ' ');
 }
 
 export type ResearchIntent = { text: string; key: string };

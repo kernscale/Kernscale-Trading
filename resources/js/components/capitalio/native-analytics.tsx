@@ -6,13 +6,14 @@ import {
     DetailHeader,
     DetailTag,
 } from '@/components/capitalio/shared';
-import { NativeLine, Unavailable } from '@/components/capitalio/native-charts';
+import { NativeLine } from '@/components/capitalio/native-charts';
 import { PerformancePanel } from '@/components/capitalio/native-panels';
 import {
     compactUsd,
     nativePortfolio,
     selectedPeriod,
 } from '@/components/capitalio/native-data';
+import { Quiet } from '@/components/kit/micro';
 import type { PortfolioSnapshot } from '@/types/hub';
 export default function NativeAnalytics({
     snapshot,
@@ -35,13 +36,13 @@ export default function NativeAnalytics({
                     },
                     {
                         title: 'Risk score',
-                        value: 'Unavailable',
+                        value: '—',
                         description: 'No validated risk-score methodology',
                         color: 'var(--chart-5)',
                     },
                     {
                         title: 'Portfolio return',
-                        value: 'Unavailable',
+                        value: '—',
                         description: 'No verified period-return series',
                         color: 'var(--chart-3)',
                     },
@@ -65,10 +66,20 @@ export default function NativeAnalytics({
                             {index === 0 ? (
                                 <NativeLine data={data} mini />
                             ) : (
-                                <Unavailable>
-                                    {metric.description}. No sample chart is
-                                    shown.
-                                </Unavailable>
+                                <div
+                                    className="flex h-full min-h-16 items-end gap-1.5"
+                                    aria-label={`${metric.description}. No sample chart is shown.`}
+                                >
+                                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(
+                                        (bar) => (
+                                            <span
+                                                key={bar}
+                                                className="flex-1 rounded-sm bg-[var(--kit-surface)]"
+                                                style={{ height: '28%' }}
+                                            />
+                                        ),
+                                    )}
+                                </div>
                             )}
                         </div>
                     </DashboardCard>
@@ -127,11 +138,15 @@ export default function NativeAnalytics({
                                 </div>
                             ))}
                         </div>
-                        <div className="min-h-56 flex-1">
-                            <Unavailable className="h-full">
+                        <div className="relative flex min-h-56 flex-1 flex-col justify-end gap-3">
+                            <div
+                                aria-hidden
+                                className="absolute inset-x-0 top-0 bottom-14 bg-[linear-gradient(to_bottom,var(--kit-line)_1px,transparent_1px)] bg-[length:100%_25%] opacity-70"
+                            />
+                            <Quiet className="relative bg-[var(--card)]">
                                 {panel.reason} Missing history is not replaced
                                 by design fixtures.
-                            </Unavailable>
+                            </Quiet>
                         </div>
                     </DashboardCard>
                 ))}

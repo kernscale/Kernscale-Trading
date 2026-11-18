@@ -13,7 +13,7 @@ import {
     UsersIcon,
     ShieldCheckIcon,
 } from '@/components/watermelon/capitalio-dashboard/components/capitalio/icons';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
     Sidebar,
     SidebarContent,
@@ -84,7 +84,7 @@ function Menu({ items }: { items: Item[] }) {
 }
 export default function CapitalioSidebar() {
     const auth = usePage().props.auth as {
-        user?: { name: string };
+        user?: { name: string; avatar?: string | null };
         roles?: string[];
     };
     const researcher = auth.roles?.some((role) =>
@@ -162,6 +162,13 @@ export default function CapitalioSidebar() {
                 <div className="border-t" />
                 <div className="flex min-w-0 items-center gap-3">
                     <Avatar className="size-10 rounded-lg after:rounded-lg">
+                        {auth.user?.avatar && (
+                            <AvatarImage
+                                src={auth.user.avatar}
+                                alt={auth.user.name}
+                                className="rounded-lg object-cover"
+                            />
+                        )}
                         <AvatarFallback className="rounded-lg">
                             {auth.user?.name.slice(0, 1) ?? 'M'}
                         </AvatarFallback>

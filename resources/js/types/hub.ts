@@ -11,7 +11,7 @@ export type Output = {
     external_id?: string | null;
     review_comment?: string | null;
     sources?: { url: string; title?: string }[];
-    author?: { name: string };
+    author?: { name: string; avatar?: string | null };
 };
 export type Run = {
     id: string | number;
@@ -64,6 +64,11 @@ export type Session = {
     }[];
     runs?: Run[];
     board?: BoardCard[];
+    active_run?: { id: string; status: string } | null;
+    last_event_id?: number;
+    last_seen_event_id?: number;
+    unread_event_count?: number;
+    has_unread?: boolean;
 };
 export type EquityObservation = {
     observed_at: string;

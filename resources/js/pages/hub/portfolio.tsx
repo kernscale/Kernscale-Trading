@@ -9,8 +9,8 @@ import {
     Errors,
     displayValue,
     Panel,
-    Status,
 } from '@/components/hub/shared';
+import { Quiet, Segment, StatusMark } from '@/components/kit/micro';
 import type { PortfolioSnapshot } from '@/types/hub';
 type Watchlist = { id: number; symbol: string };
 export default function Portfolio({
@@ -46,13 +46,23 @@ export default function Portfolio({
             )}
             <section className="flex flex-col gap-4 px-4 pb-8 md:px-8">
                 <div>
-                    <Status>
+                    <span className="kit-pill">
+                        <StatusMark
+                            status={
+                                snapshot
+                                    ? freshness?.stale
+                                        ? 'waiting'
+                                        : 'available'
+                                    : 'idle'
+                            }
+                            size={11}
+                        />
                         {snapshot
                             ? freshness?.stale
                                 ? 'Snapshot is stale'
                                 : 'Snapshot available'
                             : 'Not connected'}
-                    </Status>
+                    </span>
                 </div>
                 <Panel
                     title="Account overview"
@@ -73,12 +83,12 @@ export default function Portfolio({
                                     .map(([key, value]) => (
                                         <div
                                             key={key}
-                                            className="rounded-md border border-white/10 p-4"
+                                            className="rounded-xl border border-[var(--kit-line)] bg-[var(--kit-surface)] p-4"
                                         >
-                                            <p className="text-xs text-muted-foreground">
+                                            <p className="text-xs text-muted-foreground capitalize">
                                                 {key.replaceAll('_', ' ')}
                                             </p>
-                                            <p className="mt-3 text-2xl">
+                                            <p className="mt-3 text-2xl font-medium tabular-nums">
                                                 {displayValue(
                                                     value,
                                                     'Unavailable',
@@ -89,40 +99,30 @@ export default function Portfolio({
                             </div>
                         </>
                     ) : (
-                        <Empty title="Portfolio data is unavailable">
+                        <Quiet className="mb-6">
                             The shared native paper account is the source of
                             truth. A missing connection never becomes a zero
                             balance or synthetic performance.
-                        </Empty>
+                        </Quiet>
                     )}
-                    <div
-                        className="mb-4 flex flex-wrap gap-2"
-                        role="tablist"
-                        aria-label="Portfolio data"
-                    >
-                        {(
-                            [
-                                'holdings',
-                                'accounts',
-                                'activities',
-                                'risk',
-                                'watchlists',
-                                'history',
-                            ] as const
-                        ).map((key) => (
-                            <button
-                                key={key}
-                                role="tab"
-                                aria-selected={tab === key}
-                                onClick={() => setTab(key)}
-                                className={`hub-button capitalize ${tab === key ? 'primary' : ''}`}
-                            >
-                                {key === 'history'
-                                    ? 'Performance history'
-                                    : key}
-                            </button>
-                        ))}
-                    </div>
+                    <Segment
+                        className="mb-5"
+                        label="Portfolio data"
+                        value={tab}
+                        onChange={setTab}
+                        options={[
+                            { value: 'holdings', label: 'Holdings' },
+                            { value: 'accounts', label: 'Accounts' },
+                            { value: 'activities', label: 'Activities' },
+                            { value: 'risk', label: 'Risk' },
+                            {
+                                value: 'watchlists',
+                                label: 'Watchlists',
+                                count: watchlists.length,
+                            },
+                            { value: 'history', label: 'Performance history' },
+                        ]}
+                    />
                     {tab === 'watchlists' ? (
                         <>
                             <p className="mb-4 text-xs text-muted-foreground">
@@ -158,13 +158,16 @@ export default function Portfolio({
                                 <Errors errors={form.errors} />
                             </form>
                             {watchlists.length ? (
-                                <ul className="divide-y divide-white/10">
+                                <ul className="divide-y divide-[var(--kit-line)] rounded-xl border border-[var(--kit-line)]">
                                     {watchlists.map((item) => (
                                         <li
-                                            className="flex items-center justify-between py-3"
+                                            className="flex items-center justify-between px-4 py-2.5"
                                             key={item.id}
                                         >
-                                            <span className="font-mono text-sm">
+                                            <span className="flex items-center gap-3 font-mono text-sm">
+                                                <span className="grid size-8 place-items-center rounded-lg bg-[var(--kit-hover)] text-[11px] font-semibold">
+                                                    {item.symbol.slice(0, 2)}
+                                                </span>
                                                 {item.symbol}
                                             </span>
                                             <button
@@ -220,16 +223,23 @@ export default function Portfolio({
                         />
                     )}
                 </Panel>
-                <div className="mt-5 grid gap-5 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                     <Panel title="Connected capabilities">
                         {snapshot?.capabilities ? (
                             <>
                                 <div className="mb-4 flex flex-wrap gap-2">
                                     {snapshot.capabilities.available.map(
                                         (item) => (
-                                            <Status key={item}>
+                                            <span
+                                                key={item}
+                                                className="kit-pill capitalize"
+                                            >
+                                                <StatusMark
+                                                    status="available"
+                                                    size={11}
+                                                />
                                                 {item.replaceAll('_', ' ')}
-                                            </Status>
+                                            </span>
                                         ),
                                     )}
                                 </div>
@@ -243,10 +253,10 @@ export default function Portfolio({
                                 </p>
                             </>
                         ) : (
-                            <p className="text-sm leading-7 text-muted-foreground">
+                            <Quiet>
                                 The source has not reported its supported
                                 capabilities.
-                            </p>
+                            </Quiet>
                         )}
                     </Panel>
                     <Panel title="Portfolio tools">

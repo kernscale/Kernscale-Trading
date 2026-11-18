@@ -205,6 +205,19 @@ try {
                 '$r->set("ci-smoke", "ok"); if($r->get("ci-smoke")!=="ok")exit(1); $r->del("ci-smoke");')
         self.compose('app', 'exec', '-T', 'app', 'php', '-r', code)
         self.receipt['checks']['laravelRedisRoundtrip'] = True
+        self.compose('app', 'exec', '-T', 'app', 'php', '-r', '''
+if (!extension_loaded('gd') || !function_exists('imagewebp') || !function_exists('imagecreatefromwebp')) exit(1);
+$path = tempnam(sys_get_temp_dir(), 'ci-avatar-');
+try {
+    $image = imagecreatetruecolor(4, 4);
+    if (!imagewebp($image, $path, 85)) exit(1);
+    $decoded = imagecreatefromwebp($path);
+    if ($decoded === false || imagesx($decoded) !== 4 || imagesy($decoded) !== 4) exit(1);
+} finally {
+    unlink($path);
+}
+''')
+        self.receipt['checks']['avatarWebpRoundtrip'] = True
         self.pdf_attachment()
         self.compose('app', 'up', '-d', '--wait', '--wait-timeout', '60', 'queue')
         self.compose('app', 'exec', '-T', 'queue', 'php', 'artisan', 'horizon:status')

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\AvatarController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 /* @chisel-password-confirmation */
@@ -12,6 +13,9 @@ Route::middleware(['auth', 'approved'])->group(function () {
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('settings/profile/avatar', [AvatarController::class, 'store'])->middleware('throttle:12,1')->name('avatar.update');
+    Route::delete('settings/profile/avatar', [AvatarController::class, 'destroy'])->name('avatar.destroy');
+    Route::get('avatars/{user}', [AvatarController::class, 'show'])->middleware(['verified', 'security.enrolled'])->name('avatars.show');
 });
 
 Route::middleware(['auth', 'approved', 'verified'])->group(function () {

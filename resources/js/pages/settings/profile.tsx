@@ -3,7 +3,7 @@ import { Form, Head, usePage } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
 /* @end-chisel-email-verification */
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
-import Heading from '@/components/heading';
+import AvatarUpload from '@/components/avatar-upload';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,12 +37,9 @@ export default function Profile(
 
             <h1 className="sr-only">Profile settings</h1>
 
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title="Profile"
-                    description="Update your name and email address"
-                />
+            <AvatarUpload user={auth.user} />
+
+            <div className="space-y-6 border-t border-[var(--kit-line)] pt-8">
 
                 <Form
                     {...ProfileController.update.form()}
@@ -132,7 +129,9 @@ export default function Profile(
                 </Form>
             </div>
 
-            <p className="text-sm text-muted-foreground">Contact an owner to manage your membership.</p>
+            <p className="border-t border-[var(--kit-line)] pt-6 text-[12.5px] text-[var(--kit-faint)]">
+                Membership is managed by a workspace owner.
+            </p>
         </>
     );
 }

@@ -2,7 +2,7 @@ FROM node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35
 FROM dunglas/frankenphp:1.13.5-php8.4.27-bookworm@sha256:30061df7626971d597e45962269dfa7c077d972e96d1c4baf7c9259d5f7ecd55 AS source
 RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils \
     && rm -rf /var/lib/apt/lists/*
-RUN install-php-extensions bcmath intl opcache pcntl pdo_pgsql redis zip \
+RUN install-php-extensions bcmath gd intl opcache pcntl pdo_pgsql redis zip \
     && mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
     && groupadd --gid 10001 kernscale \
     && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin kernscale \

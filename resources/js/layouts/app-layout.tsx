@@ -8,6 +8,7 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import type { BreadcrumbItem } from '@/types';
 import '@/components/watermelon/capitalio-dashboard/dashboard.css';
 import '@/components/capitalio/capitalio.css';
+import '@/components/kit/kit.css';
 export default function AppLayout({
     children,
 }: {
@@ -35,7 +36,7 @@ export default function AppLayout({
             </a>
             <CapitalioSidebar />
             <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-0.5 pl-0">
-                <div className="shadow-custom flex min-h-0 min-w-0 flex-1 flex-col bg-background">
+                <div className="kit shadow-custom flex min-h-0 min-w-0 flex-1 flex-col bg-background">
                     <CapitalioTopbar />
                     <div
                         id="main-content"
@@ -46,7 +47,7 @@ export default function AppLayout({
                                 sourcePage
                                     ? ''
                                     : research
-                                      ? 'h-full min-h-0 p-4 pb-8 md:p-8'
+                                      ? 'h-full min-h-0 p-2 md:p-3'
                                       : 'p-4 pb-8 md:p-8'
                             }
                         >

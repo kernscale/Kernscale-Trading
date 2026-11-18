@@ -1,11 +1,5 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import {
-    DataTable,
-    Errors,
-    PageHeading,
-    Panel,
-    Status,
-} from '@/components/hub/shared';
+import { DataTable, Errors, Panel, Status } from '@/components/hub/shared';
 type Member = {
     id: number;
     name: string;
@@ -24,9 +18,6 @@ export default function Admin({
     return (
         <>
             <Head title="Administration" />
-            <PageHeading eyebrow="Owner controls" title="Membership & access">
-                <Status>Owner access</Status>
-            </PageHeading>
             <div className="grid items-start gap-5 xl:grid-cols-[1.5fr_1fr]">
                 <Panel title="Members">
                     <div className="overflow-auto">
@@ -85,11 +76,7 @@ export default function Admin({
                         </table>
                     </div>
                 </Panel>
-                <Panel title="Invite a member">
-                    <p className="mb-5 text-sm leading-6 text-muted-foreground">
-                        Members complete account security enrollment before
-                        entering the workspace.
-                    </p>
+                <Panel title="Invite">
                     <form
                         className="space-y-4"
                         onSubmit={(e) => {

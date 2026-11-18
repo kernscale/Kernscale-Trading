@@ -1,62 +1,100 @@
-.research-grid {
-    display: grid;
-    grid-template-columns: 220px minmax(280px, 1fr) 280px;
-    gap: 1px;
-    background: var(--border);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    overflow: hidden;
-    height: calc(100dvh - 220px);
+.research-workspace-page {
+    display: flex;
+    height: 100%;
     min-height: 0;
+    flex-direction: column;
+    gap: 10px;
+}
+.research-grid {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 252px minmax(0, 1fr) 0;
+    border: 1px solid var(--kit-line);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--background);
+    transition: grid-template-columns 320ms var(--kit-ease);
+}
+.research-grid[data-context] {
+    grid-template-columns: 252px minmax(0, 1fr) 300px;
 }
 .research-pane {
     min-width: 0;
     min-height: 0;
-    background: var(--card);
 }
 .research-sessions {
-    padding: 18px 12px;
+    padding: 12px 8px;
     overflow-y: auto;
+    background: var(--kit-surface);
+    border-right: 1px solid var(--kit-line);
+    scrollbar-width: thin;
 }
 .research-context {
-    padding: 20px;
+    padding: 18px;
     overflow-y: auto;
+    border-left: 1px solid var(--kit-line);
+    background: var(--kit-surface);
+    scrollbar-width: thin;
+}
+.research-grid:not([data-context]) .research-context {
+    visibility: hidden;
+    padding: 0;
+    border: 0;
 }
 .research-conversation {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: var(--background);
-    min-height: 0;
-}
-.research-conversation > header,
-.research-composer {
-    flex-shrink: 0;
+    height: 100%;
 }
 .research-scroll {
     flex: 1;
     min-height: 0;
     overflow: auto;
-    padding: 28px;
+    padding: 32px 24px 24px;
     scrollbar-width: thin;
 }
 .research-composer {
-    padding: 18px;
-    border-top: 1px solid var(--border);
-    background: var(--card);
+    flex-shrink: 0;
+    position: relative;
+    padding: 0 24px 14px;
+}
+.research-composer::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 28px;
+    pointer-events: none;
+    background: linear-gradient(to bottom, transparent, var(--background));
+}
+.research-search-input {
+    width: 100%;
+    height: 34px;
+    padding: 0 10px 0 32px;
+    border-radius: 10px;
+    border: 1px solid var(--kit-line);
+    background: var(--background);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 160ms ease;
+}
+.research-search-input:focus {
+    border-color: var(--kit-line-strong);
 }
 .research-tabs {
-    display: none;
+    display: none !important;
 }
-@media (max-width: 1200px) {
+@media (max-width: 1279px) {
     .research-tabs {
-        display: flex;
-        gap: 6px;
-        margin-bottom: 12px;
+        display: inline-flex !important;
+        align-self: flex-start;
     }
-    .research-grid {
+    .research-grid,
+    .research-grid[data-context] {
         display: block;
-        height: calc(100dvh - 256px);
     }
     .research-pane {
         height: 100%;
@@ -64,40 +102,84 @@
     .research-pane.mobile-hidden {
         display: none;
     }
+    .research-context,
+    .research-grid .research-context:not(.mobile-hidden) {
+        visibility: visible;
+        padding: 18px;
+        border: 0;
+    }
+    .research-sessions {
+        border: 0;
+    }
 }
 @media (max-width: 767px) {
     .research-grid {
-        height: auto;
-        min-height: 60vh;
-    }
-    .research-conversation {
-        min-height: 65vh;
+        border-radius: 14px;
     }
     .research-scroll {
-        padding: 18px;
-        max-height: 65vh;
+        padding: 22px 14px 18px;
     }
     .research-composer {
-        padding: 12px;
+        padding: 0 8px 8px;
     }
 }
 
-.research-sessions .research-search-input {
-    padding-left: 2.25rem;
+/* Kanban (cult-ui Kanban Board adaptation) */
+.research-kanban {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(190px, 1fr));
+    gap: 10px;
+    min-width: 780px;
+    align-items: start;
 }
-
-.research-workspace-page {
-    display: flex;
-    height: 100%;
-    min-height: 0;
-    flex-direction: column;
+.kanban-column {
+    min-height: 240px;
+    padding: 10px 8px;
+    border-radius: 14px;
+    background: var(--kit-surface);
+    border: 1px solid transparent;
+    transition:
+        background 160ms ease,
+        border-color 160ms ease;
 }
-.research-workspace-page > .research-grid {
-    flex: 1;
-    height: auto;
-    min-height: 0;
+.kanban-column[data-over] {
+    border-color: var(--kit-line-strong);
+    background: var(--kit-raised);
 }
-.research-workspace-page .research-conversation {
-    min-height: 0;
-    height: 100%;
+.kanban-card {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    text-align: left;
+    background: var(--background);
+    border: 1px solid var(--kit-line);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+    cursor: grab;
+    animation: kanban-in 320ms var(--kit-ease) both;
+    transition:
+        transform 220ms var(--kit-spring),
+        border-color 160ms ease,
+        opacity 160ms ease;
+}
+.kanban-card:hover {
+    border-color: var(--kit-line-strong);
+    transform: translateY(-1px);
+}
+.kanban-card:active {
+    cursor: grabbing;
+    transform: scale(0.98);
+}
+.kanban-drop {
+    height: 2px;
+    margin: 2px 4px;
+    border-radius: 2px;
+    background: var(--primary);
+    box-shadow: 0 0 8px var(--primary);
+}
+@keyframes kanban-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.97);
+        filter: blur(4px);
+    }
 }

@@ -33,6 +33,8 @@ Route::middleware(['auth', 'verified', 'approved', 'security.enrolled'])->group(
     Route::post('/research/runs/{run}/output', [ResearchArtifactController::class, 'store']);
     Route::post('/research/sessions/{session}/board', [ResearchController::class, 'card']);
     Route::patch('/research/sessions/{session}/board/{card}', [ResearchController::class, 'updateCard']);
+    Route::delete('/research/sessions/{session}/board/{card}', [ResearchController::class, 'destroyCard']);
+    Route::delete('/research/sessions/{session}', [ResearchController::class, 'destroy']);
     Route::get('/outputs', [OutputController::class, 'index'])->name('outputs');
     Route::get('/outputs/{output}/revisions', [OutputHistoryController::class, 'index']);
     Route::post('/outputs', [OutputController::class, 'create']);

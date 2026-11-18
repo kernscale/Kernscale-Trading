@@ -21,7 +21,7 @@ class CommunityTopic extends Model
     /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class)->select('id', 'name');
+        return $this->belongsTo(User::class)->select('id', 'name', 'avatar_path');
     }
 
     /** @return HasMany<CommunityComment, $this> */

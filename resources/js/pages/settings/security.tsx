@@ -3,6 +3,7 @@ import { ArrowRight, Check, KeyRound, ShieldCheck } from 'lucide-react';
 import { useRef } from 'react';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
 import Heading from '@/components/heading';
+import { StatusMark } from '@/components/kit/micro';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ type Props = {
 export default function Security(props: Props) {
     const passwordInput = useRef<HTMLInputElement>(null);
     const currentPasswordInput = useRef<HTMLInputElement>(null);
+    const ready = !!props.twoFactorEnabled && !!props.passkeys?.length;
 
     return (
         <>
@@ -34,28 +36,31 @@ export default function Security(props: Props) {
             <h1 className="sr-only">Security settings</h1>
             <section
                 aria-labelledby="enrollment-heading"
-                className="rounded-xl border border-white/10 bg-white/[.025] p-5"
+                className="rounded-xl border border-[var(--kit-line)] p-4"
             >
-                <p className="mb-2 text-[10px] tracking-widest text-muted-foreground uppercase">
-                    Workspace access ·{' '}
-                    {Number(!!props.twoFactorEnabled) +
-                        Number(!!props.passkeys?.length)}{' '}
-                    of 2 steps complete
-                </p>
-                <h2 id="enrollment-heading" className="text-lg font-medium">
-                    {props.twoFactorEnabled && props.passkeys?.length
-                        ? 'Your account is ready'
-                        : 'Secure your workspace'}
+                <h2
+                    id="enrollment-heading"
+                    className="flex items-center gap-2 text-[15px] font-medium"
+                >
+                    <StatusMark status={ready ? 'done' : 'waiting'} />
+                    {ready ? 'Account secured' : 'Secure your workspace'}
+                    <span className="ml-auto text-[12px] font-normal text-[var(--kit-faint)] tabular-nums">
+                        {Number(!!props.twoFactorEnabled) +
+                            Number(!!props.passkeys?.length)}
+                        /2
+                    </span>
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Set up an authenticator and a passkey before entering
-                    Trading. Both protect your account at sign-in.
-                </p>
-                <ol className="my-5 space-y-3">
+                {!ready && (
+                    <p className="mt-1.5 text-[13px] text-[var(--kit-faint)]">
+                        Set up an authenticator and a passkey before entering
+                        Trading.
+                    </p>
+                )}
+                <ol className="mt-4 space-y-2">
                     <li>
                         <a
                             href="#authenticator-enrollment"
-                            className="flex items-center gap-3 rounded-lg border border-white/10 p-3 hover:bg-white/5"
+                            className="flex items-center gap-3 rounded-lg p-2.5 transition-colors hover:bg-[var(--kit-hover)]"
                         >
                             <span className="flex size-8 items-center justify-center rounded-full bg-white/5">
                                 {props.twoFactorEnabled ? (
@@ -86,7 +91,7 @@ export default function Security(props: Props) {
                     <li>
                         <a
                             href="#passkey-enrollment"
-                            className="flex items-center gap-3 rounded-lg border border-white/10 p-3 hover:bg-white/5"
+                            className="flex items-center gap-3 rounded-lg p-2.5 transition-colors hover:bg-[var(--kit-hover)]"
                         >
                             <span className="flex size-8 items-center justify-center rounded-full bg-white/5">
                                 {props.passkeys?.length ? (
@@ -115,12 +120,13 @@ export default function Security(props: Props) {
                         </a>
                     </li>
                 </ol>
-                <p className="text-xs leading-6 text-muted-foreground">
-                    Keep your recovery codes somewhere safe, separate from this
-                    device. They help you sign in if your authenticator is
-                    unavailable.
-                </p>
-                {props.twoFactorEnabled && !!props.passkeys?.length && (
+                {!ready && (
+                    <p className="mt-3 text-[12px] text-[var(--kit-faint)]">
+                        Keep recovery codes somewhere safe, away from this
+                        device.
+                    </p>
+                )}
+                {ready && (
                     <Link href="/dashboard" className="hub-button primary mt-4">
                         Return to hub <ArrowRight className="size-4" />
                     </Link>

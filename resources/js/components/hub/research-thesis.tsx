@@ -180,32 +180,27 @@ export default function ResearchThesis({ session }: { session: Session }) {
                     </p>
                 )}
             </details>
-            <details open className="mb-6">
-                <summary className="cursor-pointer text-xs font-medium">
-                    Agent workspace proposals{' '}
-                    <span className="ml-1 text-muted-foreground">
-                        {session.proposals?.filter(
-                            (proposal) => proposal.status === 'pending',
-                        ).length ?? 0}{' '}
-                        pending
-                    </span>
-                </summary>
-                <div className="mt-4 space-y-3">
-                    {session.proposals?.length ? (
-                        session.proposals.map((proposal) => (
+            {!!session.proposals?.length && (
+                <details open className="mb-6">
+                    <summary className="cursor-pointer text-xs font-medium">
+                        Proposals{' '}
+                        <span className="ml-1 text-muted-foreground">
+                            {session.proposals?.filter(
+                                (proposal) => proposal.status === 'pending',
+                            ).length ?? 0}{' '}
+                            pending
+                        </span>
+                    </summary>
+                    <div className="mt-4 space-y-3">
+                        {session.proposals.map((proposal) => (
                             <ProposalDecision
                                 key={proposal.id}
                                 proposal={proposal}
                             />
-                        ))
-                    ) : (
-                        <p className="text-xs leading-6 text-muted-foreground">
-                            The agent can propose thesis and board changes.
-                            Nothing is applied without your decision.
-                        </p>
-                    )}
-                </div>
-            </details>
+                        ))}
+                    </div>
+                </details>
+            )}
         </>
     );
 }
