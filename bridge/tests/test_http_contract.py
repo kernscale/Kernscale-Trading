@@ -16,16 +16,16 @@ from uuid import uuid4
 class HttpContractTest(unittest.TestCase):
     def test_real_http_run_poll_replay_and_researcher_denial(self):
         token = 'offline-http-contract-' + 'x' * 32
-        with tempfile.TemporaryDirectory() as directory, socket.socket() as reservation:
+        with tempfile.TemporaryDirectory() as directory, socket.socket() as reservation, tempfile.TemporaryFile(mode='w+t') as startup:
             reservation.bind(('127.0.0.1', 0))
             port = reservation.getsockname()[1]
             reservation.close()
             environment = {**os.environ, 'TRADING_BRIDGE_TOKEN': token,
                            'TRADING_BRIDGE_DB': str(Path(directory) / 'runs.sqlite'),
                            'TRADING_BRIDGE_IDENTITIES': str(Path(directory) / 'not-admitted.json')}
-            process = subprocess.Popen([sys.executable, '-m', 'uvicorn', 'bridge.app:create_app',
+            process = subprocess.Popen([sys.executable, '-m', 'uvicorn', 'bridge.tests.http_fixture:create_offline_app',
                 '--factory', '--host', '127.0.0.1', '--port', str(port)], env=environment,
-                cwd=Path(__file__).resolve().parents[2], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                cwd=Path(__file__).resolve().parents[2], stdout=subprocess.DEVNULL, stderr=startup)
             try:
                 def request(path, method='GET', payload=None):
                     headers = {'Authorization': 'Bearer ' + token, 'X-Workspace-ID': 'kernscale-trading'}
@@ -41,7 +41,8 @@ class HttpContractTest(unittest.TestCase):
                         break
                     except URLError:
                         if process.poll() is not None:
-                            self.fail('offline bridge exited before readiness')
+                            startup.seek(0)
+                            self.fail(f'offline bridge exited before readiness (exit {process.returncode}):\n{startup.read()[-4000:]}')
                         time.sleep(.05)
                 else:
                     self.fail('offline bridge did not become ready')
