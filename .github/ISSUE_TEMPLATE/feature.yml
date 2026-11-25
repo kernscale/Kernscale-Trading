@@ -1,0 +1,22 @@
+name: Improvement proposal
+description: Propose a focused improvement before implementing it.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+      description: Describe who would benefit and what they are trying to do.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the intended result and how it could be checked.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and boundaries
+      description: Mention alternatives, dependencies or effects on privacy and paper-ledger ownership.

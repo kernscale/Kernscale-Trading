@@ -1,0 +1,40 @@
+name: Public repository safety
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  public-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Check out candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Keep local operational state out of the public tree
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import subprocess
+          import sys
+
+          paths = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
+          blocked = []
+          for name in filter(None, paths):
+              path = pathlib.PurePosixPath(name)
+              environment = path.name == '.env' or (
+                  path.name.startswith('.env.') and path.name not in {'.env.example', '.env.sample', '.env.template'}
+              )
+              if '.orchestration' in path.parts or environment:
+                  blocked.append(name)
+          if blocked:
+              print('Remove local state from the public Git tree:', *blocked, sep='\n')
+              sys.exit(1)
+          print('Public-tree check passed; credential detection is handled separately by secret scanning.')
+          PY

@@ -1,0 +1,29 @@
+name: Bug report
+description: Report a reproducible problem using synthetic data.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include credentials, private research or production data.
+        Report vulnerabilities through the private security reporting link instead.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Expected and observed behavior
+      description: Explain what happened and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include minimal steps and synthetic input, plus relevant sanitized errors.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Version and environment
+      description: Include the commit, OS, browser and relevant PHP, Node or Python version.
+    validations:
+      required: true

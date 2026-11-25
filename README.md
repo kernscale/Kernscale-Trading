@@ -1,5 +1,10 @@
 # Kernscale Trading Hub
 
+Open-source application code, licensed under [MIT](LICENSE). Start with
+[CONTRIBUTING.md](CONTRIBUTING.md) to propose a change, and use [SECURITY.md](SECURITY.md)
+for private vulnerability reports. Repository access does not grant access to
+deployed services or private research.
+
 One Laravel 13 / React application for approved Kernscale members: shared paper portfolio, scheduled research receipts, private R1 research, human-reviewed outputs/strategies and community discussions. Native TradingAgents schedules and the Trading-CLI paper ledger remain on Agents2. This checkout is a local candidate, not a production release.
 
 The approved portfolio scope is **one shared paper account and private watchlists**. Laravel stores projections and research/application state; it does not maintain another editable financial ledger.
@@ -33,4 +38,8 @@ The web app needs neither OMP nor provider keys in the browser. [The private bri
 
 Run a specific test file with `php artisan test tests/Feature/ResearchLifecycleTest.php`, frontend types with `npm run types:check`, and only changed-file formatting/lint. Tests use `withoutVite()` and do not need a production asset build. Bridge checks and pinned native fixtures are documented in its README.
 
-[Runtime packaging](docs/deployment/runtime.md), [legacy import](docs/deployment/legacy-import.md), [native mark capture](bridge/MARKS.md), and [.orchestration/progress.md](.orchestration/progress.md) record ownership and outstanding acceptance. Docker packaging does not itself admit the app to Ops. Release requires immutable image/source identity, real canonical-origin authentication, Linux isolation/provider acceptance, native state reconciliation, measured encrypted off-host recovery, privileged Ops admission and `ack release`.
+[Runtime packaging](docs/deployment/runtime.md), [legacy import](docs/deployment/legacy-import.md), and [native mark capture](bridge/MARKS.md) describe operational boundaries. Internal progress and acceptance reports stay outside the public Git tree. Docker packaging does not itself admit the app to Ops. Release requires immutable image/source identity, real canonical-origin authentication, Linux isolation/provider acceptance, native state reconciliation, measured encrypted off-host recovery, privileged Ops admission and `ack release`.
+
+The private-repository image publishing and transfer workflows are disabled in
+this public repository. Contributor validation stays separate from operator-managed
+production delivery.
