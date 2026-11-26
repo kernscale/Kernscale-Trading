@@ -121,16 +121,18 @@ for action in deploy rollback; do
   selected=$candidate
   [[ "$action" != rollback ]] || selected=$base
   printf '%s\n' "$selected" >"$work/selected"
-  cat >"$app/release.env" <<EOF
+  for mode in wrong-env-source wrong-pgdata wrong-db wrong-user wrong-secret startup-env stopped unhealthy wrong-image wrong-image-id wrong-version wrong-data-directory wrong-extension recovery missing-identity changes-during-preflight freeze; do
+    rm -f "$work/up" "$work/read"
+    printf '%s\n' "$mode" >"$work/mode"
+    envfile="$app/postgres.env"
+    [[ "$mode" != wrong-env-source ]] || envfile="$app/unreviewed.env"
+    cat >"$app/release.env" <<EOF
 POSTGRES_IMAGE=$selected
-POSTGRES_ENV_FILE=$app/postgres.env
+POSTGRES_ENV_FILE=$envfile
 REDIS_IMAGE=redis:7
 REDIS_CONFIG_FILE=$app/redis.conf
 TRADING_PGBACKREST_SECRETS=$app/backup-files
 EOF
-  for mode in wrong-pgdata wrong-db wrong-user wrong-secret startup-env stopped unhealthy wrong-image wrong-image-id wrong-version wrong-data-directory wrong-extension recovery missing-identity changes-during-preflight freeze; do
-    rm -f "$work/up" "$work/read"
-    printf '%s\n' "$mode" >"$work/mode"
     cat >"$app/postgres.env" <<'EOF'
 PGDATA=/var/lib/postgresql/data
 POSTGRES_DB=trading
@@ -155,6 +157,7 @@ EOF
       exit 1
     fi
     case "$mode" in
+      wrong-env-source) expected='The resolved Trading database env path differs' ;;
       wrong-pgdata|wrong-db|wrong-user|wrong-secret|startup-env)
         expected='The effective PostgreSQL environment differs' ;;
       stopped) expected='Expected exactly one running Trading PostgreSQL workload' ;;

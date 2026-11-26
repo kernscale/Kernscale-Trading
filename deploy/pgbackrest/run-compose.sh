@@ -33,13 +33,28 @@ case "$action" in
   *) exit 2 ;;
 esac
 
-docker=(env -i HOME="$HOME" PATH="$PATH" docker --host unix:///var/run/docker.sock)
-compose=("${docker[@]}" compose --project-name "$project" --project-directory "$directory/.."
-  --env-file "$1" --file "$directory/../state.compose.yaml")
-[[ "$action" == rollback ]] || compose+=(--file "$directory/compose.overlay.yaml")
-model=$("${compose[@]}" config --no-env-resolution --format json postgres 2>/dev/null) ||
-  fail 'Could not validate the Trading release Compose model.'
-image=$(jq -er --arg project "$project" --arg data "$datadir" '
+clean=(env -i HOME="$HOME" PATH="$PATH")
+local_docker=(docker --host unix:///var/run/docker.sock)
+docker=("${clean[@]}" "${local_docker[@]}")
+options=(compose --project-name "$project" --project-directory "$directory/..")
+release=(--env-file "$1" --file "$directory/../state.compose.yaml")
+[[ "$action" == rollback ]] || release+=(--file "$directory/compose.overlay.yaml")
+if [[ "$action" == config ]]; then
+  model=$("${docker[@]}" "${options[@]}" "${release[@]}" config --no-env-resolution --format json postgres 2>/dev/null) ||
+    fail 'Could not validate the Trading release Compose model.'
+else
+  # Project only the nonsecret interpolation reference first. Compose v2 may
+  # discard env_file in the rendered model even with --no-env-resolution.
+  reference=$(printf '%s\n' '{"services":{"postgres":{"image":"scratch","environment":{"TRADING_ENV_FILE":"${POSTGRES_ENV_FILE:?}"}}}}' |
+    "${docker[@]}" "${options[@]}" --env-file "$1" --file - config --format json postgres 2>/dev/null |
+    jq -er '.services.postgres.environment.TRADING_ENV_FILE' 2>/dev/null) ||
+    fail 'Could not verify the Trading release database env reference.'
+  [[ "$reference" == "$app/postgres.env" ]] || fail 'The resolved Trading database env path differs.'
+  model=$("${clean[@]}" POSTGRES_ENV_FILE="$app/postgres.env" "${local_docker[@]}" "${options[@]}" "${release[@]}" \
+    config --format json postgres 2>/dev/null) ||
+    fail 'Could not resolve the canonical Trading database configuration.'
+fi
+image=$(printf '%s\n' "$model" | jq -er --arg project "$project" --arg data "$datadir" '
   select(.name==$project and (.services|keys)==["postgres"] and
          .volumes.postgres.name=="kernscale-trading-hub-postgres" and .volumes.postgres.external==true and
          .networks.data.name=="kernscale-trading-hub-data" and .networks.data.external==true and
@@ -47,18 +62,13 @@ image=$(jq -er --arg project "$project" --arg data "$datadir" '
          (.services.postgres.volumes | map(select(.target==$data)) |
            length==1 and .[0].type=="volume" and .[0].source=="postgres" and (.[0].read_only//false)==false)) |
   .services.postgres.image
-' <<<"$model")
+')
 if [[ "$action" == rollback ]]; then
   [[ "$image" == "$base" ]] || fail 'Expected the pinned Trading rollback image.'
 else
   [[ "$image" =~ $derivative ]] || fail 'Expected the approved immutable Trading PG17 derivative.'
 fi
 [[ "$action" != config ]] || exit 0
-
-jq -e --arg env "$app/postgres.env" '
-  .services.postgres.env_file |
-  length==1 and (.[0] | if type=="object" then .path else . end)==$env
-' <<<"$model" >/dev/null || fail 'The rendered Trading database env path differs.'
 
 select_running() {
   "${docker[@]}" ps --no-trunc --filter "label=com.docker.compose.project=$project" \
@@ -101,12 +111,9 @@ expected="170012|trading|kernscale_trading_admin|$datadir|f|plpgsql=1.0|"
 system_id=${identity#"$expected"}
 
 # Resolve only the validated file. Keep all values in memory and out of diagnostics.
-apply=("${docker[@]}" compose --project-name "$project" --project-directory "$directory/.."
-  --env-file /dev/null --file -)
-resolved=$(printf '%s\n' "$model" | "${apply[@]}" config --format json postgres 2>/dev/null) ||
-  fail 'Could not resolve the canonical Trading database configuration.'
+apply=("${docker[@]}" "${options[@]}" --env-file /dev/null --file -)
 if ! {
-  printf '%s\n' "$resolved"
+  printf '%s\n' "$model"
   "${docker[@]}" image inspect --format '{{json .Config.Env}}' "$image"
   "${docker[@]}" inspect --format '{{json .Config.Env}}' "$id"
 } | jq -e -s --arg data "$datadir" '
@@ -123,7 +130,7 @@ fi
 
 guard=$directory/existing-cluster.sh
 [[ -f "$guard" && -x "$guard" && $(realpath "$guard") == "$guard" ]] || fail 'The reviewed existing-cluster startup guard is required.'
-frozen=$(printf '%s\n' "$resolved" | jq -c --arg id "$system_id" --arg guard "$guard" '
+frozen=$(printf '%s\n' "$model" | jq -c --arg id "$system_id" --arg guard "$guard" '
   del(.services.postgres.env_file) |
   .services.postgres.entrypoint=["/trading-existing-cluster.sh"] |
   .services.postgres.command=(.services.postgres.command // ["postgres"]) |
@@ -132,7 +139,11 @@ frozen=$(printf '%s\n' "$resolved" | jq -c --arg id "$system_id" --arg guard "$g
 ')
 reparsed=$(printf '%s\n' "$frozen" | "${apply[@]}" config --format json postgres 2>/dev/null) ||
   fail 'The frozen Trading model failed Compose validation.'
-printf '%s\n%s\n' "$frozen" "$reparsed" | jq -e -s '.[0]==.[1]' >/dev/null ||
+printf '%s\n%s\n' "$frozen" "$reparsed" | jq -e -s '
+  def canonical:
+    (.services.postgres.volumes[] | select(.target=="/trading-existing-cluster.sh").bind.create_host_path) //= false;
+  (.[0]|canonical)==(.[1]|canonical)
+' >/dev/null ||
   fail 'The frozen Trading model did not round-trip unchanged.'
 [[ "$(select_running)" == "$id" &&
    $("${docker[@]}" inspect --format '{{.State.Running}}/{{.State.Health.Status}}' "$id") == true/healthy &&
