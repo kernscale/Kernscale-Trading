@@ -56,7 +56,8 @@ fi
 [[ "$action" != config ]] || exit 0
 
 jq -e --arg env "$app/postgres.env" '
-  .services.postgres.env_file | length==1 and .[0].path==$env
+  .services.postgres.env_file |
+  length==1 and (.[0] | if type=="object" then .path else . end)==$env
 ' <<<"$model" >/dev/null || fail 'The rendered Trading database env path differs.'
 
 select_running() {

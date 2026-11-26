@@ -154,6 +154,23 @@ EOF
       cat "$work/result" >&2
       exit 1
     fi
+    case "$mode" in
+      wrong-pgdata|wrong-db|wrong-user|wrong-secret|startup-env)
+        expected='The effective PostgreSQL environment differs' ;;
+      stopped) expected='Expected exactly one running Trading PostgreSQL workload' ;;
+      unhealthy) expected='outside its healthy private state contract' ;;
+      wrong-image) expected='Unexpected existing Trading image' ;;
+      wrong-image-id) expected='does not match its pin' ;;
+      wrong-version|wrong-data-directory|wrong-extension|recovery|missing-identity)
+        expected='did not prove exact version' ;;
+      changes-during-preflight) expected='Trading changed after the preflight' ;;
+      freeze) expected='Trading PostgreSQL verified on the selected image' ;;
+    esac
+    if ! grep -qF "$expected" "$work/result"; then
+      printf 'Wrong denial or acceptance for %s %s\n' "$action" "$mode" >&2
+      cat "$work/result" >&2
+      exit 1
+    fi
     if grep -qF 'case_literal' "$work/result"; then echo 'A fixture secret reached the activation output.' >&2; exit 1; fi
     printf '%s %s verified\n' "$action" "$mode"
   done
