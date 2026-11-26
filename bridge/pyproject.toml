@@ -4,7 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115,<1",
-  "uvicorn>=0.30,<1",
+  "uvicorn>=0.54.0,<1",
   "omp-rpc @ git+https://github.com/can1357/oh-my-pi.git@6f03614d761366972e80e84e25d1418ed678d2c7#subdirectory=sdk/python/omp-rpc",
 ]
 [project.optional-dependencies]
