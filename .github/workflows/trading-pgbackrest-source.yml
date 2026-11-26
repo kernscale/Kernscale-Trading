@@ -22,6 +22,7 @@ jobs:
       - name: Verify the exact overlay scope
         run: |
           bash deploy/pgbackrest/tests/test-compose.sh
+          sudo -n env CI=true PATH="$PATH" bash deploy/pgbackrest/tests/test-activation-guard.sh
       - name: Build, verify and scan the local PG17.12 candidate
         run: |
           set -euo pipefail
@@ -31,6 +32,7 @@ jobs:
           mkdir -p "$receipt"
           docker buildx build --platform linux/amd64 --load --tag "$candidate" \
             --metadata-file "$receipt/build.json" "$src"
+          bash "$src/tests/test-existing-cluster.sh" "$candidate" 2>&1 | tee "$receipt/guard.txt"
           bash "$src/tests/native-pitr.sh" "$candidate" 2>&1 | tee "$receipt/native.txt"
           curl --fail --silent --show-error --location \
             https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-64bit.tar.gz \

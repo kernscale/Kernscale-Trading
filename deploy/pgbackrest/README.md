@@ -60,9 +60,15 @@ paired input requires its `POSTGRES_IMAGE` to equal the live exact image.
 Retain the original env before replacing it and restore it if activation
 fails. Root privately links the existing capture lock and verifies no
 parallel application changes. The wrapper acquires existing paired capture
-and new archive locks, checks the exact project/volume/immutable image and
-applies only the frozen, validated PostgreSQL plan. It records a plan SHA256
-and changes no app, worker or Redis service.
+and new archive locks throughout preflight and apply. It checks the exact
+running, healthy project, volume and immutable image, then reads the cluster
+identity from PostgreSQL 17.12 as the existing Trading database owner. It
+requires the live primary, canonical data path and plpgsql 1.0. Compose must
+resolve exactly the existing database environment before applying the frozen
+plan from stdin. The receipt records a SHA256 of the redacted plan. The
+startup guard verifies the actual PostgreSQL control-file identifier and
+starts the existing cluster directly, without invoking initialization. The
+wrapper verifies the same identity after apply.
 
 Use `./run-compose.sh /srv/kernscale/apps/kernscale-trading-hub/release.env deploy`.
 Check live DB, app authorization, all affected routes, unchanged non-PG
@@ -70,8 +76,10 @@ containers/named volume and the paired backup's accepted exact identity.
 Restore old canonical env and use `rollback` in the same lineage if
 acceptance fails. Rollback restores the pinned original 17.12 image on the
 same named volume and retains new archive artifacts. Preserve the reviewed
-source and hash because Docker can report the wrapper's removed temporary
-Compose path.
+source and hash because Docker records stdin as the Compose config source.
+Both operations require a healthy running source. A failed startup that leaves
+the service stopped requires the existing recovery procedure before the
+wrapper can verify and accept a rollback.
 
 After activation, run `backup.sh stanza-create`, `check`, `full` and `info`.
 Record full label, WAL status, actual SFTP readback and freshness. Create a
