@@ -1,0 +1,11 @@
+[Unit]
+Description=Schedule Trading Hub PostgreSQL full backup
+ConditionHost=kernscale2-ops
+
+[Timer]
+OnCalendar=Sun *-*-* 03:40:00 UTC
+Persistent=true
+Unit=kernscale-trading-pgbackrest@full.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Trading Hub PostgreSQL pgBackRest %I
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+ConditionHost=kernscale2-ops
+
+[Service]
+Type=oneshot
+ExecStart=/opt/kernscale/trading-pgbackrest/backup.sh %i
+TimeoutStartSec=3h
