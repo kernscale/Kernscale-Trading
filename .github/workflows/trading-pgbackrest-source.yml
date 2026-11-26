@@ -1,0 +1,52 @@
+name: Trading PostgreSQL recovery source
+
+on:
+  pull_request:
+    paths:
+      - deploy/state.compose.yaml
+      - deploy/pgbackrest/**
+      - .github/workflows/trading-pgbackrest-source.yml
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+      - name: Verify the exact overlay scope
+        run: |
+          docker compose version
+          bash deploy/pgbackrest/tests/test-compose.sh
+          sudo -n env CI=true PATH="$PATH" bash deploy/pgbackrest/tests/test-activation-guard.sh
+      - name: Build, verify and scan the local PG17.12 candidate
+        run: |
+          set -euo pipefail
+          src=deploy/pgbackrest
+          candidate="trading-pg17:ci-$GITHUB_SHA"
+          receipt="$RUNNER_TEMP/trading-recovery-receipts"
+          mkdir -p "$receipt"
+          docker buildx build --platform linux/amd64 --load --tag "$candidate" \
+            --metadata-file "$receipt/build.json" "$src"
+          bash "$src/tests/test-existing-cluster.sh" "$candidate" 2>&1 | tee "$receipt/guard.txt"
+          bash "$src/tests/native-pitr.sh" "$candidate" 2>&1 | tee "$receipt/native.txt"
+          curl --fail --silent --show-error --location \
+            https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-64bit.tar.gz \
+            --output "$RUNNER_TEMP/trivy-trading.tar.gz"
+          printf '%s  %s\n' 2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a "$RUNNER_TEMP/trivy-trading.tar.gz" |
+            sha256sum --check -
+          tar -xzf "$RUNNER_TEMP/trivy-trading.tar.gz" -C "$RUNNER_TEMP" trivy
+          "$RUNNER_TEMP/trivy" image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed \
+            --ignorefile /dev/null --exit-code 1 --format json --output "$receipt/scan.json" "$candidate"
+      - name: Retain the native checks and scan receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: trading-pg17-native-recovery
+          path: ${{ runner.temp }}/trading-recovery-receipts/
+          if-no-files-found: warn

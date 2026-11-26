@@ -1,0 +1,11 @@
+[Unit]
+Description=Schedule Trading Hub PostgreSQL diff backup
+ConditionHost=kernscale2-ops
+
+[Timer]
+OnCalendar=Mon..Sat *-*-* 03:40:00 UTC
+Persistent=true
+Unit=kernscale-trading-pgbackrest@diff.service
+
+[Install]
+WantedBy=timers.target

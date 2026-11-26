@@ -1,0 +1,29 @@
+services:
+  postgres:
+    command:
+      - postgres
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_timeout=60s
+      - -c
+      - archive_command=/usr/bin/pgbackrest --stanza=trading-hub --config-include-path=/run/trading-pgbackrest archive-push %p
+    networks:
+      data: {}
+      backup-egress: {gw_priority: 1}
+    volumes:
+      - type: bind
+        source: ${TRADING_PGBACKREST_SECRETS:?Set the private Trading backup files directory}
+        target: /run/trading-pgbackrest
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ./pgbackrest/pgbackrest.conf
+        target: /etc/pgbackrest/pgbackrest.conf
+        read_only: true
+        bind: {create_host_path: false}
+    tmpfs:
+      - /run/pgbackrest:uid=999,gid=999,mode=0700,size=16m
+networks:
+  backup-egress:
+    name: kernscale-trading-pgbackrest-egress
