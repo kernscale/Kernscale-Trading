@@ -92,6 +92,9 @@ case "$3" in
     esac
     ;;
   exec)
+    shift 3
+    [[ $# == 15 && "$*" == "--user postgres $container psql -X -qAt -w -v ON_ERROR_STOP=1 -U kernscale_trading_admin -d trading -c "* &&
+       "${@: -1}" == *"FROM pg_control_system()"* ]] || exit 98
     version=170012 recovery=f extension=plpgsql=1.0
     case "$mode" in
       wrong-version) version=170011 ;;

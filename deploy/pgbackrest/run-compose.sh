@@ -86,8 +86,8 @@ resolved_live_id=$("${docker[@]}" image inspect --format '{{.Id}}' "$live")
 [[ "$resolved_live_id" == "$(jq -er .imageId <<<"$current")" ]] || fail 'The existing Trading image ID does not match its pin.'
 
 read_cluster() {
-  "${docker[@]}" exec --user postgres "$1" psql -X -qAt -w -v ON_ERROR_STOP=1
-  -U kernscale_trading_admin -d trading -c "
+  "${docker[@]}" exec --user postgres "$1" psql -X -qAt -w -v ON_ERROR_STOP=1 \
+    -U kernscale_trading_admin -d trading -c "
   SELECT current_setting('server_version_num'), current_database(), current_user,
          current_setting('data_directory'), pg_is_in_recovery(),
          (SELECT string_agg(extname || '=' || extversion, ',' ORDER BY extname) FROM pg_extension),
